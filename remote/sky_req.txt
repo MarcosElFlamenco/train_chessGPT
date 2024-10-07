@@ -4,4 +4,6 @@ tiktoken==0.8.0
 torch==2.2.0
 tqdm==4.66.1
 transformers==4.45.1
-wandb==0.16.0
+wandb==0.18.3
+datasets==3.0.1
+
