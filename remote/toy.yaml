@@ -1,0 +1,39 @@
+name: lichess_train
+
+resources:
+  accelerators: A10G:1
+  # Use spot instances to save cost.
+  use_spot: true
+
+
+# To make this example work, please run the following command:
+workdir: ~/train_ChessGPT
+
+
+file_mounts:
+  /checkpoint:
+    source: s3://toy-board-craft
+    store: s3
+    mode: MOUNT
+
+
+
+setup: |
+  # Fill in your wandb key: copy from https://wandb.ai/authorize
+  # Alternatively, you can use `--env WANDB_API_KEY=$WANDB_API_KEY`
+  # to pass the key in the command line, during `sky spot launch`.
+  echo export WANDB_API_KEY=[YOUR-WANDB-API-KEY] >> ~/.bashrc
+
+  set -e .
+   # Install conda if it's not already installed
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+  bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
+  source $HOME/miniconda/bin/activate
+
+  conda env create -f environment.yml
+  conda activate train_chessGPT
+
+run: |
+  set -e
+  python data/lichess_hf_dataset/prepare.py 
+  python train.py config/train_remote.py

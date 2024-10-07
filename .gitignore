@@ -8,3 +8,7 @@ __pycache__/
 *.pt
 *.pyc
 input.txt
+chessEnv/
+wandb
+data/*
+!data/lichess_hf_dataset

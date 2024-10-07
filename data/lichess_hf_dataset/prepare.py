@@ -22,7 +22,8 @@ if __name__ == "__main__":
     # dataset = load_dataset("csv", data_files={"train": "pgn.csv"}) # For local testing
 
     dataset_path = "adamkarvonen/chess_games"
-    file_path = "lichess_6gb_blocks.zip"
+#    file_path = "lichess_6gb_blocks.zip"
+    file_path = "lichess_100mb_blocks.zip"
     # file_path = "smaller_pgn_file_blocks.zip"
 
     # Load the dataset

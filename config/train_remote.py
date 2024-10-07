@@ -7,7 +7,7 @@ log_interval = 50  # don't print too too often
 
 always_save_checkpoint = True
 
-wandb_log = True
+wandb_log = False
 wandb_project = "chess-gpt-batch"
 wandb_run_name = "8layer_lichess"
 
@@ -29,4 +29,4 @@ min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 
 warmup_iters = 2000  # not super necessary potentially
-compile = False
+compile = True
