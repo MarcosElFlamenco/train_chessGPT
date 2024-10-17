@@ -44,5 +44,5 @@ def load_checkpoint(bucket_name, checkpoint_key, device):
         checkpoint = torch.load(local_file_path, map_location=device)
         return checkpoint
     else:
-        return 0, None
+        return None
 

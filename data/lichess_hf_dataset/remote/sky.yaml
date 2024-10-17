@@ -1,0 +1,29 @@
+# sky.yaml
+
+job:
+  name: setup-and-build
+  image: python:3.8
+  # Specify computational resources
+  resources:
+    cpu: 4            # Number of CPU cores
+    memory: "16G"     # Amount of RAM
+    # Uncomment and adjust if GPU is needed
+    # gpu: "V100"      
+  # Set environment variables if needed
+  workdir: ~/train_ChessGPT/data/lichess_hf_dataset
+
+  file_mounts:
+    /checkpoint:
+      source: s3://go-bucket-craft
+      store: s3
+      mode: MOUNT
+
+
+  # Commands to execute
+  commands:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - make hfdataset
+  # Optional: Enable logging
+  logs:
+    destination: "./logs"  # Directory to store logs

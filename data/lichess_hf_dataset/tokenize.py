@@ -7,6 +7,7 @@ import numpy as np
 import tiktoken
 from datasets import load_dataset # huggingface datasets
 import pickle
+import argparse
 import pandas as pd
 
 # number of workers in .map() call
@@ -21,11 +22,14 @@ num_proc_load_dataset = num_proc
 
 if __name__ == "__main__":
 
-    dataset_path = "MarcosElFlamenco/chess_games"
-    file_path = 'athena_blocks.zip'
+    parser = argparse.ArgumentParser(description="Parse PGN files and filter by ELO range and transcript length")
+    parser.add_argument('--csv_file', type=str, required=True, help='Directory containing PGN files')
+    args = parser.parse_args()
+
+    file_path = args.csv_file
 
     try:
-        dataset = load_dataset(dataset_path, data_files=file_path)
+        dataset = load_dataset(data_files=file_path)
         print(dataset)
 
     except Exception as e:

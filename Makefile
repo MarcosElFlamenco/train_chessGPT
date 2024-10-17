@@ -2,9 +2,9 @@ PYTHON := python3
 TRAIN := train.py
 PREPARE := data/lichess_hf_dataset/prepare.py
 
-run: $(TRAIN) prepare
+run: $(TRAIN) 
 	$(PYTHON) $(TRAIN) \
-		config/train_shakespeare_char.py
+		config/local.py
 
 prepare: $(PREPARE)
 	$(PYTHON) $(PREPARE)
@@ -12,6 +12,14 @@ prepare: $(PREPARE)
 remote: $(MAIN) clean
 	aws s3 rm s3://go-bucket-craft --recursive
 	sky jobs launch -c boardCluster --env WANDB_API_KEY remote/lichess.yaml
+
+toyremote: $(MAIN) clean
+	aws s3 rm s3://go-bucket-craft --recursive
+	sky jobs launch -c boardCluster --env WANDB_API_KEY remote/toy.yaml
+
+
+hfdataset:
+	sky jobs launch -c boardCluster remote/hfExport.yaml
 
 clean:
 	rm -f data/lichess_hf_dataset/train.bin

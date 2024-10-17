@@ -12,3 +12,6 @@ chessEnv/
 wandb
 data/*
 !data/lichess_hf_dataset
+env/
+mlflow_storage/
+mlruns/
