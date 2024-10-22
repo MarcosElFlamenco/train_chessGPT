@@ -29,7 +29,7 @@ setup: |
 
   set -e .
   
-  pip install -r remote/req.txt
+  pip install -r remote/random_req.txt
 
 run: |
   set -e

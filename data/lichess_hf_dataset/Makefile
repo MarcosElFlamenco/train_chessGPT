@@ -1,23 +1,47 @@
 PYTHON := python3
 HF_REPO := MarcosElFlamenco/chess_games
-PGN_DIRECTORY := downloaded_pgn
-CSV_FILE := lowerThan1000.csv
+
+BASE := under1500_16G
+CSV_FILE := $(BASE).csv
+BLOCKS_FILE := $(BASE)_blocks.csv
+
+PGN_DIR := downloaded_pgn
 ZIP_DIR := zipped
+BIN_DIR := binned
 S3_BUCKET := go-bucket-craft
 S3_DIR := dataset
 
 MIN_ELO := 0
-MAX_ELO := 1300
+MAX_ELO := 1500
 MIN_LEN := 300
 INPUT_LENGTH := 1023
-LINK_OCT14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-10.pgn.zst
-LINK_NOV14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-11.pgn.zst
+TEST_SIZE := 0.01
 
-LINK_FEB13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-02.pgn.zst 
-LINK_MAR13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-03.pgn.zst
-LINK_APR13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-04.pgn.zst
+RANDOM := random
+RANDOM_CSV := $(RANDOM).csv
+RANDOM_BLOCKS := $(RANDOM)_blocks.csv
+NUM_RANDOM_GAMES := 16000000
+RANDOM_GEN_LOG_FREQ := 10000
+RANDOM_GEN_SAVE_FREQ := 50000
 
 
+OCT14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-10.pgn.zst
+NOV14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-11.pgn.zst
+
+FEB13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-02.pgn.zst 
+MAR13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-03.pgn.zst
+APR13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-04.pgn.zst
+
+
+SEP24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-09.pgn.zst
+AUG24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-08.pgn.zst
+JUL24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-07.pgn.zst
+JUN24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-06.pgn.zst
+MAY24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-05.pgn.zst
+APR24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-04.pgn.zst
+MAR24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-03.pgn.zst
+
+MAR20 := https://database.lichess.org/standard/lichess_db_standard_rated_2020-03.pgn.zst
 
 HF_TOKEN := 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
 
@@ -26,68 +50,108 @@ testing:
 
 download:
 	python3 download_pgn.py \
-		--pgn_directory $(PGN_DIRECTORY) \
-		--zst_url $(LINK_FEB13) $(LINK_MAR13) $(LINK_APR13) \
+		--pgn_directory $(PGN_DIR) \
+		--zst_url $(MAR20) \
 		--post_clean 1
 
+## $(LINK_MAR24) $(LINK_APR24) $(LINK_JUN24) $(LINK_JUL24) $(LINK_AUG24) $(LINK_SEP24) \
 ##clean 1 means do clean and 0 means dont
 	
 csv:
-	python3 pgn_to_csv.py \
-		--pgn_directory $(PGN_DIRECTORY) \
+	python3 filter/pgn_to_csv.py \
+		--pgn_directory $(PGN_DIR) \
 		--output_csv $(CSV_FILE) \
 		--min_elo $(MIN_ELO) \
 		--max_elo $(MAX_ELO) \
 		--min_len $(MIN_LEN) \
 
 cast:
-	python3 castDataset.py \
+	python3 filter/castDataset.py \
 		--csv_file $(CSV_FILE) \
 		--dataset_name $(HF_DATASET)
 
 blocks:
-	python3 csv_to_blocks.py \
+	python3 filter/csv_to_blocks.py \
 		--input_file $(CSV_FILE) \
 		--input_length $(INPUT_LENGTH)
 
-zip:
+block_zip:
 	python3 zip_all.py \
 		--csv_file $(CSV_FILE) \
-		--zip_directory $(ZIP_DIR)
+		--zip_directory $(ZIP_DIR) \
+		--bin_directory $(BIN_DIR) \
+		--files blocks
+bin_zip:
+	python3 zip_all.py \
+		--csv_file $(CSV_FILE) \
+		--zip_directory $(ZIP_DIR) \
+		--bin_directory $(BIN_DIR) \
+		--files bins
+
 
 uploadhf:
-	python3 upload2.py \
+	python3 filter/upload_to_hf.py \
 		--source_dir $(ZIP_DIR) \
 		--repo_id $(HF_REPO)  \
 		--token $(HF_TOKEN)
 
 uploads3:
-	python3 upload_to_s3.py \
+	python3 filter/upload_to_s3.py \
 		--local_dir $(ZIP_DIR) \
 		--bucket $(S3_BUCKET) \
 		--s3_dir $(S3_DIR)
 
 tokens:
-	python3 tokenize.py \
-		--csv_file $(CSV_FILE)
+	python3 tokenizeData.py \
+		--blocks_file $(BLOCKS_FILE) \
+		--bin_dir $(BIN_DIR) \
+		--test_size $(TEST_SIZE)
 
-plot:
-	python3 elo_graph.py
 
-
-move:
-	cp poc_blocks.csv ~/train_ChessGPT/data/lichess_hf_dataset
-
-remote:
+filter_remote: clean
 	sky jobs launch -c boardCluster remote/sky.yaml
 
-hfdataset: download csv blocks zip uploads3
+random_remote: clean
+	sky jobs launch -c boardCluster remote/sky_random.yaml
+
+hfdataset: download csv blocks block_zip uploads3 tokens bin_zip uploads3
 ## should be the entire pipeline for exporting a folder of pgn transcripts into a huggingface dataset
 ## with elos between min and max elo
 	echo 'pipeline finished'
 
-clean:
-	rm -f $(PGN_DIRECTORY)/*
-	rm -f $(ZIP_DIR)/*
+random_csv:
+	python3 random/gen_random.py $(NUM_RANDOM_GAMES) $(RANDOM_CSV)
+
+random_blocks:
+	python3 filter/csv_to_blocks.py \
+		--input_file $(RANDOM_CSV) \
+		--input_length $(INPUT_LENGTH) \
+		--give_stats 0
+
+random_tokens:
+	python3 tokenizeData.py \
+		--blocks_file $(RANDOM_BLOCKS) \
+		--bin_dir $(BIN_DIR) \
+		--test_size $(TEST_SIZE)
+
+
+remote_random_csv:
+	python3 random/gen_random.py \
+		--num_games $(NUM_RANDOM_GAMES) \
+		--output_file $(RANDOM_CSV) \
+		--log_freq $(RANDOM_GEN_LOG_FREQ) \
+		--save_freq $(RANDOM_GEN_SAVE_FREQ) \
+		--save_s3 1\
+		--bucket_name $(S3_BUCKET) \
+		--object_name $(RANDOM_CSV)
+
+random_dataset: random_csv random_blocks random_tokens
+
+cleanDirs:
+	rm -rf zipped
+	rm -rf binned
+
+clean: cleanDirs
+	rm -f $(PGN_DIR)/*
 	rm -f *.csv
 	rm -f train.bin val.bin

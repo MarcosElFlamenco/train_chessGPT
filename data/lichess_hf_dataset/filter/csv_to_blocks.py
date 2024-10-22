@@ -23,17 +23,12 @@ def transform_text(text, input_length):
 parser = argparse.ArgumentParser(description='Process a CSV file with transcripts.')
 parser.add_argument('--input_file', type=str, help='The path to the input CSV file')
 parser.add_argument('--input_length', type=int, help='The length to truncate the transcript to')
-
-
-
+parser.add_argument('--give_stats', type=int, help='The length to truncate the transcript to')
 
 args = parser.parse_args()
 input_file = args.input_file
 input_length = args.input_length
 output_filename = input_file.replace('.csv', '_blocks.csv')
-
-print(f"Processing file: {input_file}")
-print(os.getcwd())
 
 df = pd.read_csv(
     input_file, 
@@ -43,7 +38,6 @@ df = pd.read_csv(
     encoding='utf-8',
     usecols=["transcript"]
 )
-print(df)
 
 # Apply the transform_text function
 df['transcript'] = df['transcript'].apply(lambda text: transform_text(text, input_length))
@@ -81,7 +75,6 @@ with tqdm(total=original_length, desc="Processing") as pbar:
             blocks.append(block[:block_size])
 
         # Update the progress bar
-        # Update the progress bar
         pbar.update(original_length - len(remaining_games) - pbar.n)
 
 # Create a new DataFrame for the blocks
@@ -96,5 +89,5 @@ df = df.sample(frac=1).reset_index(drop=True)
 # Save the shuffled DataFrame to the same CSV file
 df.to_csv(output_filename, index=False)
 
-df['length'] = df['transcript'].apply(len)
-print(df['length'].describe())
+#df['length'] = df['transcript'].apply(len)
+#print(df['length'].describe())

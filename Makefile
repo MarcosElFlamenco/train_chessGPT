@@ -2,7 +2,7 @@ PYTHON := python3
 TRAIN := train.py
 PREPARE := data/lichess_hf_dataset/prepare.py
 
-run: $(TRAIN) 
+run train: $(TRAIN) 
 	$(PYTHON) $(TRAIN) \
 		config/local.py
 

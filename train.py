@@ -72,6 +72,9 @@ lr_decay_iters = 600000 # should be ~= max_iters per Chinchilla
 min_lr = 6e-5 # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
 # DDP settings
 backend = 'nccl' # 'nccl', 'gloo', etc.
+
+train_bin = 'binned/train.bin'
+val_bin = 'binned/val.bin'
 # system
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
@@ -123,8 +126,8 @@ ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=
 ##Ill start here
 # poor man's data loader
 data_dir = os.path.join('data', dataset)
-train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint8, mode='r')
-val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint8, mode='r')
+train_data = np.memmap(os.path.join(data_dir, train_bin), dtype=np.uint8, mode='r')
+val_data = np.memmap(os.path.join(data_dir, val_bin), dtype=np.uint8, mode='r')
 def get_batch(split):
     data = train_data if split == 'train' else val_data
     # ix = torch.randint(len(data) - block_size, (batch_size,))

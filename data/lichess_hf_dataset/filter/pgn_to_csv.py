@@ -4,8 +4,37 @@ import argparse
 import re
 from tqdm import tqdm
 
+useful_keys = ['WhiteElo', 'BlackElo', 'Result', 'transcript']
 # --------------------------- Helper Functions --------------------------- #
+def remove_result(transcript, suffix):
+    if transcript.endswith(suffix):
+        # Remove the suffix using slicing
+        return transcript[:-len(suffix) - 1]
+    return transcript  # Return the original string if no suffix is found
 
+
+def remove_braces(text):
+    """
+    Removes all substrings enclosed in curly braces {} along with the braces
+    and the space following the closing brace.
+
+    Parameters:
+    text (str): The input string containing text with curly braces.
+
+    Returns:
+    str: The cleaned string with specified parts removed.
+    """
+    # Remove { ... } and the space after the closing brace
+    cleaned_text = re.sub(r'\{[^}]*\}\s*', '', text)
+    
+    # Replace multiple spaces with a single space
+    cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+    
+    # Remove any leading or trailing whitespace
+    cleaned_text = cleaned_text.strip()
+    
+    return cleaned_text
+                
 def parse_pgn_game(game_text):
     """
     Parses a single PGN game text and extracts headers and move text.
@@ -27,7 +56,8 @@ def parse_pgn_game(game_text):
                 match = re.match(r'\[(\w+)\s+"(.+)"\]', line)
                 if match:
                     key, value = match.groups()
-                    headers[key] = value
+                    if key in useful_keys:
+                        headers[key] = value
             else:
                 in_header = False
                 move_text += line + ' '
@@ -85,7 +115,7 @@ def parse_pgn_files(pgn_directory, output_csv, min_elo, max_elo, min_len, delimi
     written_games = 0
     skipped_games_for_len = 0
     skipped_games_for_elo = 0
-    skipped_games_for_notes = 0
+    skipped_games_for_chars = 0
 
     # Open CSV file once for writing
     with open(output_csv, 'w', newline='', encoding='utf-8') as csvfile:
@@ -120,35 +150,33 @@ def parse_pgn_files(pgn_directory, output_csv, min_elo, max_elo, min_len, delimi
                     
                     headers = parsed_game['headers']
                     move_text_with_result = parsed_game['move_text']
-                    
-                    # Extract required headers
+
+                    result = headers.get('Result')
                     white_elo = headers.get('WhiteElo')
                     black_elo = headers.get('BlackElo')
-                    result = headers.get('Result')
-                    def remove_result(transcript, suffix):
-                        if transcript.endswith(suffix):
-                            # Remove the suffix using slicing
-                            return transcript[:-len(suffix) - 1]
-                        return transcript  # Return the original string if no suffix is found
-                    move_text = remove_result(move_text_with_result, result)
-                    if '{' in move_text:
-                        skipped_games_for_notes += 1
-                        continue
                     
-                    # Validate ELO ratings
+
+                     # Validate ELO ratings
                     if not is_valid_elo(white_elo, black_elo, min_elo, max_elo):
                         skipped_games_for_elo += 1
                         if verbose:
                             print(f"Skipping game due to ELO: WhiteElo={white_elo}, BlackElo={black_elo}")
                         continue  # Skip games outside the ELO range or with missing ELO
                     
+                    # Extract required headers
+                    move_text_with_clock = remove_result(move_text_with_result, result)
+                    move_text = remove_braces(move_text_with_clock)
+                    if '?' in move_text:
+                        skipped_games_for_chars += 1
+                        continue
+                   
                     # Validate transcript length
                     if len(move_text) < min_len:
                         skipped_games_for_len += 1
                         if verbose:
                             print(f"Skipping game due to transcript length: {len(move_text)}")
                         continue  # Skip games with transcripts shorter than min_len
-                    
+
 
                     # Write the game data directly to CSV
                     writer.writerow({
@@ -163,8 +191,8 @@ def parse_pgn_files(pgn_directory, output_csv, min_elo, max_elo, min_len, delimi
     
     print(f'Skipped {skipped_games_for_len} games due to length')
     print(f'Skipped {skipped_games_for_elo} games due to elo')
-    print(f'Skipped {skipped_games_for_notes} games due to notes')
-    total_games = written_games + skipped_games_for_len + skipped_games_for_notes + skipped_games_for_elo
+    print(f'Skipped {skipped_games_for_chars} games due to notes')
+    total_games = written_games + skipped_games_for_len + skipped_games_for_chars + skipped_games_for_elo
     print(f"Successfully wrote {written_games} games to '{output_csv}', that is {int(written_games*100/(total_games))}% of initial games")
 
 # --------------------------- Execute Script --------------------------- #
@@ -177,7 +205,7 @@ if __name__ == "__main__":
     parser.add_argument('--min_elo', type=int, required=True, help='Minimum ELO rating for filtering')
     parser.add_argument('--max_elo', type=int, required=True, help='Maximum ELO rating for filtering')
     parser.add_argument('--min_len', type=int, required=True, help='Minimum length of the transcript string (in characters)')
-    parser.add_argument('--delimiter', type=str, default=',', help='Delimiter for the CSV file')
+    parser.add_argument('--delimiter', type=str, default='|', help='Delimiter for the CSV file')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output for debugging')
     
     args = parser.parse_args()

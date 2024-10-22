@@ -7,9 +7,8 @@ log_interval = 10  # don't print too too often
 
 always_save_checkpoint = False
 
-wandb_log = False
-mlflow_log = True 
-#mlflow_location = 'mlflow_storage'
+wandb_log = True
+mlflow_log = False
 mlflow_location = 'arn:aws:sagemaker:us-east-1:278996676838:mlflow-tracking-server/craft-flow'
 wandb_project = "chess-gpt-batch"
 wandb_run_name = "8layer_lichess"

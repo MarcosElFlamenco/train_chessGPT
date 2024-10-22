@@ -23,27 +23,29 @@ num_proc_load_dataset = num_proc
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Parse PGN files and filter by ELO range and transcript length")
-    parser.add_argument('--csv_file', type=str, required=True, help='Directory containing PGN files')
+    parser.add_argument('--blocks_file', type=str, required=True, help='Directory containing PGN files')
+    parser.add_argument('--bin_dir', type=str, required=True, help='Directory containing PGN files')
+    parser.add_argument('--test_size', type=float, required=True, help='Directory containing PGN files')
     args = parser.parse_args()
 
-    file_path = args.csv_file
+    file_path = args.blocks_file
+    bin_dir = args.bin_dir
+    test_size = args.test_size
 
     try:
-        dataset = load_dataset(data_files=file_path)
+        dataset = load_dataset('csv', data_files=file_path)
         print(dataset)
 
     except Exception as e:
         print(f"Error loading dataset: {e}")
 
-
-
+    nec_test_size = 1024 / len(dataset['train'])
+    test_size = max(test_size, nec_test_size)
     # by default only contains the 'train' split, so create a test split
     split_dataset = dataset['train'].train_test_split(
-        test_size=0.1, seed=2357, shuffle=True
+        test_size=test_size, seed=2357, shuffle=True
     )
     split_dataset["val"] = split_dataset.pop("test")  # rename the test split to val
-
-    print(split_dataset)
 
     # this results in:
     # >>> split_dataset
@@ -96,25 +98,41 @@ if __name__ == "__main__":
 
     # print(tokenized["val"]["ids"])
 
-    # concatenate all the ids in each dataset into one large file we can use for training
+
     for split, dset in tokenized.items():
         arr_len = np.sum(dset["len"], dtype=np.uint64)
         print(f"{split} has {arr_len} tokens")
-        filename = os.path.join(os.path.dirname(__file__), f"{split}.bin")
-        arr = np.memmap(filename, dtype=dtype, mode="w+", shape=(arr_len,))
-        print(arr.shape)
+        
+        # Construct the file path
+        try:
+            filename = os.path.join(os.path.dirname(__file__), bin_dir, f"{split}.bin")
+            
+            # Ensure that the bin_dir exists
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            
+            # Try to open the file with memmap
+            arr = np.memmap(filename, dtype=dtype, mode="w+", shape=(arr_len,))
+            print(f"File {filename} created successfully or already exists with shape {arr.shape}")
+            
+        except FileNotFoundError as e:
+            print(f"Error: File {filename} could not be created. {str(e)}")
+            continue  # Skip to the next iteration if file creation fails
+
         total_batches = 1024
         idx = 0
+
         for batch_idx in tqdm(range(total_batches), desc=f"writing {filename}"):
             # Batch together samples for faster write
             batch = dset.shard(
                 num_shards=total_batches, index=batch_idx, contiguous=True
             ).with_format("numpy")
-            # print(batch[0])
+
+            # Concatenate the batch of IDs
             arr_batch = np.concatenate(batch["ids"])
-            # print(arr_batch)
-            # print(arr_batch.shape)
+
             # Write into mmap
             arr[idx : idx + len(arr_batch)] = arr_batch
             idx += len(arr_batch)
+        
+        # Flush data to disk
         arr.flush()
