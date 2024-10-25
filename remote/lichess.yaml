@@ -2,6 +2,7 @@ name: lichess_train
 
 resources:
   accelerators: A10G:1
+  memory: 64
   # Use spot instances to save cost.
   use_spot: true
 
@@ -12,7 +13,7 @@ workdir: ~/train_ChessGPT
 
 file_mounts:
   /checkpoint:
-    source: s3://toy-board-craft
+    source: s3://chess-checkpoint-craft
     store: s3
     mode: MOUNT
 
@@ -29,5 +30,4 @@ setup: |
 
 run: |
   set -e
-  python data/lichess_hf_dataset/prepare.py 
   python train.py config/train_remote.py

@@ -17,7 +17,8 @@ MIN_LEN := 300
 INPUT_LENGTH := 1023
 TEST_SIZE := 0.01
 
-RANDOM := random
+BIN_CATEGORY := 10M
+RANDOM := random$(BIN_CATEGORY)
 RANDOM_CSV := $(RANDOM).csv
 RANDOM_BLOCKS := $(RANDOM)_blocks.csv
 NUM_RANDOM_GAMES := 16000000
@@ -120,7 +121,9 @@ hfdataset: download csv blocks block_zip uploads3 tokens bin_zip uploads3
 	echo 'pipeline finished'
 
 random_csv:
-	python3 random/gen_random.py $(NUM_RANDOM_GAMES) $(RANDOM_CSV)
+	python3 random/gen_random.py \
+		--num_games $(NUM_RANDOM_GAMES) \
+		--output_file $(RANDOM_CSV) 
 
 random_blocks:
 	python3 filter/csv_to_blocks.py \
@@ -132,6 +135,7 @@ random_tokens:
 	python3 tokenizeData.py \
 		--blocks_file $(RANDOM_BLOCKS) \
 		--bin_dir $(BIN_DIR) \
+		--bin_category $(BIN_CATEGORY) \
 		--test_size $(TEST_SIZE)
 
 
@@ -146,6 +150,7 @@ remote_random_csv:
 		--object_name $(RANDOM_CSV)
 
 random_dataset: random_csv random_blocks random_tokens
+
 
 cleanDirs:
 	rm -rf zipped

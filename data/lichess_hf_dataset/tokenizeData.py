@@ -25,12 +25,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse PGN files and filter by ELO range and transcript length")
     parser.add_argument('--blocks_file', type=str, required=True, help='Directory containing PGN files')
     parser.add_argument('--bin_dir', type=str, required=True, help='Directory containing PGN files')
+    parser.add_argument('--bin_category', type=str, default='', help='Directory containing PGN files')
     parser.add_argument('--test_size', type=float, required=True, help='Directory containing PGN files')
     args = parser.parse_args()
 
     file_path = args.blocks_file
     bin_dir = args.bin_dir
     test_size = args.test_size
+    bin_cat = args.bin_category
 
     try:
         dataset = load_dataset('csv', data_files=file_path)
@@ -105,7 +107,7 @@ if __name__ == "__main__":
         
         # Construct the file path
         try:
-            filename = os.path.join(os.path.dirname(__file__), bin_dir, f"{split}.bin")
+            filename = os.path.join(os.path.dirname(__file__), bin_dir, f"{split}{bin_cat}.bin")
             
             # Ensure that the bin_dir exists
             os.makedirs(os.path.dirname(filename), exist_ok=True)

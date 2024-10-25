@@ -17,6 +17,7 @@ $ torchrun --nproc_per_node=8 --nnodes=2 --node_rank=1 --master_addr=123.456.123
 """
 
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import time
 import math
 import pickle
@@ -26,10 +27,11 @@ import numpy as np
 import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
-
+from download_dataset import download_bins_from_s3
 
 from model import GPTConfig, GPT
 from remote.save_checkpoints import upload_checkpoint, load_checkpoint
+from remote.remove_prefix import remove_prefix_from_state_dict
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -73,21 +75,40 @@ min_lr = 6e-5 # minimum learning rate, should be ~= learning_rate/10 per Chinchi
 # DDP settings
 backend = 'nccl' # 'nccl', 'gloo', etc.
 
-train_bin = 'binned/train.bin'
-val_bin = 'binned/val.bin'
+data_type = '1M'
+
+
 # system
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
 compile = True # use PyTorch 2.0 to compile the model to be faster
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
+print('config keys:', config_keys)
 exec(open('configurator.py').read()) # overrides from command line or config file
 config = {k: globals()[k] for k in config_keys} # will be useful for logging
 # -----------------------------------------------------------------------------
 #s3 settings
+
+
 checkpoint_key = 'checkpoint.pth'
-bucket_name = 'go-bucket-craft'
-print(warmup_iters)
+bucket_name = 'chess-checkpoint-craft'
+train_name = f'train{data_type}.bin'
+val_name = f'val{data_type}.bin'
+
+
+data_dir = os.path.join('data', dataset)
+train_file = os.path.join(data_dir, train_name)
+val_file = os.path.join(data_dir, val_name)
+
+print('Downloading datasets')
+print(f'Downloading {train_name}...')
+download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=train_name,file_name=train_file )
+print(f'Downloading {val_name}...')
+download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=val_name,file_name=val_file )
+
+
+
 # various inits, derived attributes, I/O setup
 ddp = int(os.environ.get('RANK', -1)) != -1 # is this a ddp run?
 if ddp:
@@ -125,9 +146,10 @@ ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=
 
 ##Ill start here
 # poor man's data loader
-data_dir = os.path.join('data', dataset)
-train_data = np.memmap(os.path.join(data_dir, train_bin), dtype=np.uint8, mode='r')
-val_data = np.memmap(os.path.join(data_dir, val_bin), dtype=np.uint8, mode='r')
+train_data = np.memmap(train_file, dtype=np.uint8, mode='r')
+val_data = np.memmap(val_file, dtype=np.uint8, mode='r')
+
+
 def get_batch(split):
     data = train_data if split == 'train' else val_data
     # ix = torch.randint(len(data) - block_size, (batch_size,))
@@ -145,10 +167,13 @@ def get_batch(split):
 # init these up here, can override if init_from='resume' (i.e. from a checkpoint)
 iter_num = 0
 best_val_loss = 1e9
+train_loss_list = []
+val_loss_list = []
 
 # attempt to derive vocab_size from the dataset
 meta_path = os.path.join(data_dir, 'meta.pkl')
 meta_vocab_size = None
+print(meta_path)
 if os.path.exists(meta_path):
     with open(meta_path, 'rb') as f:
         meta = pickle.load(f)
@@ -182,11 +207,18 @@ if init_from == 'resume':
         # honestly no idea how checkpoints sometimes get this prefix, have to debug more
         unwanted_prefix = '_orig_mod.'
         iter_num = checkpoint['iter_num']
+        train_loss_list = checkpoint['train_loss_list']
+        val_loss_list = checkpoint['val_loss_list']
+        flag = False
         for k,v in list(state_dict.items()):
             if k.startswith(unwanted_prefix):
+                flag = True
                 state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
         model.load_state_dict(state_dict)
         best_val_loss = checkpoint['best_val_loss']
+        if flag:
+            print('we did in face remove unwanted prefix')
+
 if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")
@@ -270,8 +302,8 @@ if mlflow_log and master_process:
     mlflow.set_tracking_uri(mlflow_location)
 #    mlflow.log_params(config)
     mlflow.set_experiment("chess_training")
-                
-print('tracking started')
+
+
 
 with mlflow.start_run(log_system_metrics=True):
     ## training loop
@@ -289,6 +321,8 @@ with mlflow.start_run(log_system_metrics=True):
         # evaluate the loss on train/val sets and write checkpoints
         if iter_num % eval_interval == 0 and master_process:
             losses = estimate_loss()
+            train_loss_list.append(losses['train'])
+            val_loss_list.append(losses['val'])
             print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
             if wandb_log:
                 wandb.log({
@@ -305,6 +339,8 @@ with mlflow.start_run(log_system_metrics=True):
                 mlflow.log_metric('val_loss', losses['val'])
                 mlflow.log_metric('lr', lr)
                 mlflow.log_metric('mfu', running_mfu*100)
+                mlflow.log_metric('train_loss_list', train_loss_list)
+                mlflow.log_metric('val_loss_list', val_loss_list)
 
             if losses['val'] < best_val_loss or always_save_checkpoint:
                 best_val_loss = losses['val']
@@ -314,6 +350,8 @@ with mlflow.start_run(log_system_metrics=True):
                         'optimizer': optimizer.state_dict(),
                         'model_args': model_args,
                         'iter_num': iter_num,
+                        'train_loss_list': train_loss_list,
+                        'val_loss_list' : val_loss_list,
                         'best_val_loss': best_val_loss,
                         'config': config,
                     }
@@ -375,13 +413,14 @@ with mlflow.start_run(log_system_metrics=True):
                     "mfu": running_mfu*100, # convert to percentage
                 })
             if mlflow_log:
-                print('mlflow logging')
                 mlflow.log_metric('iter', iter_num ) 
                 mlflow.log_metric('train_loss', lossf)
                 mlflow.log_metric('lr', lr)
                 mlflow.log_metric('mfu', running_mfu*100)
-                print('mlflow logged')
-    
+                mlflow.log_metric('train_loss_list', train_loss_list)
+                mlflow.log_metric('val_loss_list', val_loss_list)
+
+   
 
         iter_num += 1
         local_iter_num += 1

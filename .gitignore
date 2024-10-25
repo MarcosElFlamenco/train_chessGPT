@@ -18,3 +18,4 @@ mlruns/
 __pycache__
 '__pycache__ copy'
 *.csv
+models
