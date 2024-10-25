@@ -33,4 +33,4 @@ beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 warmup_iters = 2000  # not super necessary potentially
 compile = True
 
-data_type = '10M'
+data_type = '1M'

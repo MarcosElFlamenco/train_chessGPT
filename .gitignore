@@ -19,3 +19,5 @@ __pycache__
 '__pycache__ copy'
 *.csv
 models
+checkpoint.pth
+identify_mistake.py

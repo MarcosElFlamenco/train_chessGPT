@@ -18,7 +18,7 @@ gradient_accumulation_steps = 1
 batch_size = 10
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
 init_from = 'resume'
-data_type = '5M'
+data_type = '300K'
 
 
 

@@ -5,6 +5,7 @@ import pickle
 import os
 import re
 import chess
+import sys
 from model import GPT, GPTConfig  # Ensure model.py is in the same directory or adjust the import path accordingly
  
 
@@ -202,7 +203,9 @@ def run_validation(args):
     total_generated_moves = 0
     illegal_moves_count = 0
     illegal_moves_examples = []
+    illegal_moves_board = []
     illegal_move_positions = []
+    illegal_move_pgns = []
     current_pgn = ';'
 
     # Iterate through each move in the PGN
@@ -238,7 +241,12 @@ def run_validation(args):
                 print(f"Move {move_number}: Generated move '{generated_move}' is ILLEGAL.\n")
             illegal_moves_count += 1
             illegal_move_positions.append(1)
-            illegal_moves_examples.append((move_number, player, generated_move, "Illegal move generated"))
+#            illegal_moves_examples.append((move_number, player, generated_move, "Illegal move generated"))
+#            illegal_moves_board.append(chess.Board())
+#            illegal_move_pgns.append(current_pgn)
+            print(f'Move num {move_number}, playing as {player}, played {generated_move}')
+            print(board)
+            print(current_pgn)
 
         # Attempt to apply scripted move to the board
         try:
@@ -265,9 +273,16 @@ def run_validation(args):
 
     if illegal_moves_examples:
         print("Examples of Illegal Moves:")
-        for example in illegal_moves_examples[:5]:  # Show up to 5 examples
-            move_num, player, move, reason = example
-            print(f"Move {move_num}: {player} -> '{move}' | Reason: {reason}")
+        if args.illegal_info:
+            for i in range(len(illegal_moves_examples)):
+                print(f'the pgn was {illegal_move_pgns[i]}')
+                print('that gave the following board state')
+                print(illegal_moves_board[i])
+                print(f'the move that was offered was {illegal_moves_examples[i]}')
+        else:
+            for example in illegal_moves_examples[:5]:  # Show up to 5 examples
+                move_num, player, move, reason = example
+                print(f"Move {move_num}: {player} -> '{move}' | Reason: {reason}")
     else:
         print("All generated moves were legal!")
 
@@ -298,6 +313,7 @@ def main():
     parser.add_argument('--temperature', type=float, default=1.0, help='Sampling temperature for move generation (default: 1.0)')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output for debugging')
     parser.add_argument('--graph', action='store_true', help='Enable verbose output for debugging')
+    parser.add_argument('--illegal_info', action='store_true', help='Enable verbose output for debugging')
 
     args = parser.parse_args()
 

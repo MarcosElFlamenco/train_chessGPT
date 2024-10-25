@@ -31,7 +31,6 @@ from download_dataset import download_bins_from_s3
 
 from model import GPTConfig, GPT
 from remote.save_checkpoints import upload_checkpoint, load_checkpoint
-from remote.remove_prefix import remove_prefix_from_state_dict
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -207,8 +206,14 @@ if init_from == 'resume':
         # honestly no idea how checkpoints sometimes get this prefix, have to debug more
         unwanted_prefix = '_orig_mod.'
         iter_num = checkpoint['iter_num']
-        train_loss_list = checkpoint['train_loss_list']
-        val_loss_list = checkpoint['val_loss_list']
+        try:
+            train_loss_list = checkpoint['train_loss_list']
+        except Exception as e:
+            print('no train loss list found defaulting to empty')
+        try:
+            val_loss_list = checkpoint['val_loss_list']
+        except Exception as e:
+            print('no val loss list found defaulting to empty')
         flag = False
         for k,v in list(state_dict.items()):
             if k.startswith(unwanted_prefix):
@@ -339,8 +344,6 @@ with mlflow.start_run(log_system_metrics=True):
                 mlflow.log_metric('val_loss', losses['val'])
                 mlflow.log_metric('lr', lr)
                 mlflow.log_metric('mfu', running_mfu*100)
-                mlflow.log_metric('train_loss_list', train_loss_list)
-                mlflow.log_metric('val_loss_list', val_loss_list)
 
             if losses['val'] < best_val_loss or always_save_checkpoint:
                 best_val_loss = losses['val']
@@ -417,8 +420,6 @@ with mlflow.start_run(log_system_metrics=True):
                 mlflow.log_metric('train_loss', lossf)
                 mlflow.log_metric('lr', lr)
                 mlflow.log_metric('mfu', running_mfu*100)
-                mlflow.log_metric('train_loss_list', train_loss_list)
-                mlflow.log_metric('val_loss_list', val_loss_list)
 
    
 
