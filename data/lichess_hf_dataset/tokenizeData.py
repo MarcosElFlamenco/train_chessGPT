@@ -107,7 +107,7 @@ if __name__ == "__main__":
         
         # Construct the file path
         try:
-            filename = os.path.join(os.path.dirname(__file__), bin_dir, f"{split}{bin_cat}.bin")
+            filename = os.path.join(os.path.dirname(__file__), f"{split}{bin_cat}.bin")
             
             # Ensure that the bin_dir exists
             os.makedirs(os.path.dirname(filename), exist_ok=True)

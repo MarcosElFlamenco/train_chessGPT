@@ -1,0 +1,47 @@
+name: lichess_train
+
+resources:
+  # Use spot instances to save cost.
+  use_spot: true
+
+
+# To make this example work, please run the following command:
+workdir: ~/train_ChessGPT/data/lichess_hf_dataset
+
+
+file_mounts:
+  /endpoint:
+    source: s3://bins-bucket-craft
+    store: s3
+    mode: MOUNT
+  /source_files:
+    source: s3://go-bucket-craft
+    store: s3
+    mode: MOUNT
+
+setup: |
+  set -e .
+  pip install -r remote/preprocess_req.txt
+
+run: |
+  set -e
+  python remote/download_file_from_s3.py \
+    --bucket_name go-bucket-craft \
+    --s3_key random.csv \
+    --download_path \random.csv
+  echo 'successsfully downloaded'
+  python3 filter/csv_to_blocks.py \
+    --input_file random.csv \
+    --input_length 1023 \
+    --give_stats 0
+  echo 'successsfully blocked'
+  python3 tokenizeData.py \
+    --blocks_file random_blocks.csv \
+    --bin_dir binned \
+    --bin_category 16M \
+    --test_size 0.01
+  echo 'successsfully tokenized'
+  python remote/upload_file_to_s3.py \
+    --bucket_name bins-bucket-craft \
+    --file_paths train16M.bin val16M.bin
+

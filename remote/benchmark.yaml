@@ -5,22 +5,14 @@ resources:
   accelerators: A10G
   use_spot: true
 
-
 # To make this example work, please run the following command:
-workdir: ~/train_ChessGPT
-
+workdir: ~/train_ChessGPT/evaluation
 
 file_mounts:
-  /checkpoint:
-    source: s3://bins-bucket-craft
-    store: s3
-    mode: MOUNT
   /sourcecsv:
     source: s3://go-bucket-craft
     store: s3
     mode: MOUNT
-
-
 
 setup: |
   # Fill in your wandb key: copy from https://wandb.ai/authorize
@@ -29,8 +21,16 @@ setup: |
   echo export WANDB_API_KEY=[YOUR-WANDB-API-KEY] >> ~/.bashrc
 
   set -e .
-  pip install -r remote/sky_req.txt
+  ll eval_models
+  pip install -r benchmark.txt
 
 run: |
   set -e
-  python3 train.py config/random16M.py
+  python3 benchmark1.py \
+    eval \
+    --checkpoint eval_models/checkpoint16Mb.pth \
+    --input_pgn random15M.pgn \
+    --precomputed_moves precompute_moves.pkl \
+    --data_dir eval_data \
+    --temperature 1.0 \
+    --troubleshoot_verbose

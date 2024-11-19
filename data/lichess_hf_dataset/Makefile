@@ -17,11 +17,12 @@ MIN_LEN := 300
 INPUT_LENGTH := 1023
 TEST_SIZE := 0.01
 
-BIN_CATEGORY := 10M
+BIN_CATEGORY := 15M
 RANDOM := random$(BIN_CATEGORY)
 RANDOM_CSV := $(RANDOM).csv
+RANDOM_PGN := $(RANDOM).pgn
 RANDOM_BLOCKS := $(RANDOM)_blocks.csv
-NUM_RANDOM_GAMES := 16000000
+NUM_RANDOM_GAMES := 10
 RANDOM_GEN_LOG_FREQ := 10000
 RANDOM_GEN_SAVE_FREQ := 50000
 
@@ -151,6 +152,26 @@ remote_random_csv:
 
 random_dataset: random_csv random_blocks random_tokens
 
+
+random_pgn:
+	python3 random/toPGN.py \
+		--csv_file $(RANDOM_CSV) \
+		--pgn_file $(RANDOM_PGN) \
+		--move_column transcript
+
+download_generated_random:
+	python remote/download_file_from_s3.py \
+		--bucket_name go-bucket-craft \
+		--s3_key random.csv \
+		--download_path random$(BIN_CATEGORY).csv
+
+upload_preprocessed_random:
+	python remote/upload_file_to_s3.py \
+		--bucket_name bins-bucket-craft \
+		--file_paths train$(BIN_CATEGORY).bin val$(BIN_CATEGORY).bin
+
+remote_data_preprocess: clean
+	sky jobs launch -c boardCluster remote/preprocess.yaml
 
 cleanDirs:
 	rm -rf zipped

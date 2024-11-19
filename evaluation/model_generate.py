@@ -167,7 +167,9 @@ def main():
     print("Predicted Next Characters:")
     print(predicted_chars)
     identical_count, matching_indices = count_and_get_identical_indexes(input_string, (';' + predicted_chars))
-    print('identical_count ', identical_count)
+    num_tokens = len(predicted_chars)
+    print(f'Num identical tokens: {identical_count}, num total tokens: {num_tokens}, identical rate: {identical_count/num_tokens}')
+    print(f'Identical token rate: {identical_count/num_tokens} ({identical_count}/{num_tokens})')
 
 
 

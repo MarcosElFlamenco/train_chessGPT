@@ -75,8 +75,7 @@ min_lr = 6e-5 # minimum learning rate, should be ~= learning_rate/10 per Chinchi
 backend = 'nccl' # 'nccl', 'gloo', etc.
 
 data_type = '1M'
-checkpoint_key = 'checkpoint.pth'
-bucket_name = 'chess-checkpoint-craft'
+
 
 # system
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -91,7 +90,8 @@ config = {k: globals()[k] for k in config_keys} # will be useful for logging
 #s3 settings
 
 
-
+checkpoint_key = 'checkpoint.pth'
+bucket_name = 'chess-checkpoint-craft'
 train_name = f'train{data_type}.bin'
 val_name = f'val{data_type}.bin'
 
@@ -100,15 +100,6 @@ data_dir = os.path.join('data', dataset)
 train_file = os.path.join(data_dir, train_name)
 val_file = os.path.join(data_dir, val_name)
 
-print('Downloading datasets')
-print(f'Downloading {train_name}...')
-download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=train_name,file_name=train_file )
-print(f'Downloading {val_name}...')
-download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=val_name,file_name=val_file )
-
-
-
-# various inits, derived attributes, I/O setup
 ddp = int(os.environ.get('RANK', -1)) != -1 # is this a ddp run?
 if ddp:
     init_process_group(backend=backend)
@@ -145,9 +136,6 @@ ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=
 
 ##Ill start here
 # poor man's data loader
-train_data = np.memmap(train_file, dtype=np.uint8, mode='r')
-val_data = np.memmap(val_file, dtype=np.uint8, mode='r')
-
 
 def get_batch(split):
     data = train_data if split == 'train' else val_data
@@ -169,29 +157,19 @@ best_val_loss = 1e9
 train_loss_list = []
 val_loss_list = []
 
-# attempt to derive vocab_size from the dataset
-meta_path = os.path.join(data_dir, 'meta.pkl')
-meta_vocab_size = None
-print(meta_path)
-if os.path.exists(meta_path):
-    with open(meta_path, 'rb') as f:
-        meta = pickle.load(f)
-    meta_vocab_size = meta['vocab_size']
-    print(f"found vocab_size = {meta_vocab_size} (inside {meta_path})")
 
 # model init
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
                 bias=bias, vocab_size=None, dropout=dropout) # start with model_args from command line
 
 
-
+init_from = 'scratch'
 if init_from == 'resume':
-    print(f"Resuming training from checkpoint {checkpoint_key} in bucket {bucket_name}")
+    print(f"Resuming training from checkpoint")
     # resume training from a checkpoint.
     ckpt_path = os.path.join(out_dir, 'ckpt.pt')
     checkpoint = load_checkpoint(bucket_name, checkpoint_key, device)
     if checkpoint == None:
-        print('there was no checkpoint')
         init_from = 'scratch'
     else:
         checkpoint_model_args = checkpoint['model_args']
@@ -229,9 +207,7 @@ if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")
     # determine the vocab size we'll use for from-scratch training
-    if meta_vocab_size is None:
-        print("defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)")
-    model_args['vocab_size'] = meta_vocab_size if meta_vocab_size is not None else 50304
+    model_args['vocab_size'] = 32
     gptconf = GPTConfig(**model_args)
     model = GPT(gptconf)
 elif init_from.startswith('gpt2'):
@@ -257,11 +233,6 @@ if init_from == 'resume':
     optimizer.load_state_dict(checkpoint['optimizer'])
 checkpoint = None # free up memory
 
-# compile the model
-if compile:
-    print("compiling the model... (takes a ~minute)")
-    unoptimized_model = model
-    model = torch.compile(model) # requires PyTorch 2.0
 
 # wrap model into DDP container
 if ddp:
@@ -297,139 +268,21 @@ def get_lr(it):
     coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
     return min_lr + coeff * (learning_rate - min_lr)
 
-# logging
-if wandb_log and master_process:
-    import wandb
-    #wandb.init(project=wandb_project, name=wandb_run_name, config=config)
-    wandb.init(project=wandb_project, config=config)
-if mlflow_log and master_process:
-    import mlflow
-    import mlflow.sklearn
-    mlflow.set_tracking_uri(mlflow_location)
-#    mlflow.log_params(config)
-    mlflow.set_experiment("chess_training")
 
 
+checkpoint = {
+    'model': model.state_dict(),
+    'optimizer': optimizer.state_dict(),
+    'model_args': model_args,
+    'iter_num': iter_num,
+    'train_loss_list': train_loss_list,
+    'val_loss_list' : val_loss_list,
+    'best_val_loss': best_val_loss,
+    'config': config,
+}
+print(f"saving checkpoint to {out_dir}")
+local_file_path = os.path.join(out_dir, 'ckpt.pt')
+torch.save(checkpoint, local_file_path)
+upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
 
-#with mlflow.start_run(log_system_metrics=True):
-## training loop
-X, Y = get_batch('train') # fetch the very first batch
-t0 = time.time()
-local_iter_num = 0 # number of iterations in the lifetime of this process
-raw_model = model.module if ddp else model # unwrap DDP container if needed
-running_mfu = -1.0
-while True:
-    # determine and set the learning rate for this iteration
-    lr = get_lr(iter_num) if decay_lr else learning_rate
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-    
-    # evaluate the loss on train/val sets and write checkpoints
-    if iter_num % eval_interval == 0 and master_process:
-        losses = estimate_loss()
-        train_loss_list.append(losses['train'])
-        val_loss_list.append(losses['val'])
-        print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
-        if wandb_log:
-            wandb.log({
-                "iter": iter_num,
-                "train/loss": losses['train'],
-                "val/loss": losses['val'],
-                "lr": lr,
-                "mfu": running_mfu*100, # convert to percentage
-            })
-
-        if mlflow_log:
-            mlflow.log_metric('iter', iter_num ) 
-            mlflow.log_metric('train_loss', losses['train'])
-            mlflow.log_metric('val_loss', losses['val'])
-            mlflow.log_metric('lr', lr)
-            mlflow.log_metric('mfu', running_mfu*100)
-
-        if losses['val'] < best_val_loss or always_save_checkpoint:
-            best_val_loss = losses['val']
-            if iter_num > 0:
-                checkpoint = {
-                    'model': raw_model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'model_args': model_args,
-                    'iter_num': iter_num,
-                    'train_loss_list': train_loss_list,
-                    'val_loss_list' : val_loss_list,
-                    'best_val_loss': best_val_loss,
-                    'config': config,
-                }
-                print(f"saving checkpoint to {out_dir}")
-                local_file_path = os.path.join(out_dir, 'ckpt.pt')
-                torch.save(checkpoint, local_file_path)
-                upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
-    if iter_num == 0 and eval_only:
-        break
-
-    # forward backward update, with optional gradient accumulation to simulate larger batch size
-    # and using the GradScaler if data type is float16
-    for micro_step in range(gradient_accumulation_steps):
-        if ddp:
-            # in DDP training we only need to sync gradients at the last micro step.
-            # the official way to do this is with model.no_sync() context manager, but
-            # I really dislike that this bloats the code and forces us to repeat code
-            # looking at the source of that context manager, it just toggles this variable
-            model.require_backward_grad_sync = (micro_step == gradient_accumulation_steps - 1)
-        with ctx:
-            logits, loss = model(X, Y)
-            loss = loss / gradient_accumulation_steps # scale the loss to account for gradient accumulation
-        # immediately async prefetch next batch while model is doing the forward pass on the GPU
-        X, Y = get_batch('train')
-        #if iter_num < 10:
-        #     print("Batch")
-        #     print(X)
-        #     print("y")
-        #     print(Y)
-        # backward pass, with gradient scaling if training in fp16
-        scaler.scale(loss).backward()
-    # clip the gradient
-    if grad_clip != 0.0:
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-    # step the optimizer and scaler if training in fp16
-    scaler.step(optimizer)
-    scaler.update()
-    # flush the gradients as soon as we can, no need for this memory anymore
-    optimizer.zero_grad(set_to_none=True)
-
-    # timing and logging
-    t1 = time.time()
-    dt = t1 - t0
-    t0 = t1
-    if iter_num % log_interval == 0 and master_process:
-        # get loss as float. note: this is a CPU-GPU sync point
-        # scale up to undo the division above, approximating the true total loss (exact would have been a sum)
-        lossf = loss.item() * gradient_accumulation_steps
-        if local_iter_num >= 5: # let the training loop settle a bit
-            mfu = raw_model.estimate_mfu(batch_size * gradient_accumulation_steps, dt)
-            running_mfu = mfu if running_mfu == -1.0 else 0.9*running_mfu + 0.1*mfu
-        print(f"iter {iter_num}: loss {lossf:.4f}, time {dt*1000:.2f}ms, mfu {running_mfu*100:.2f}%")
-        if wandb_log:
-            wandb.log({
-                "iter": iter_num,
-                "train/loss": lossf,
-                "lr": lr,
-                "mfu": running_mfu*100, # convert to percentage
-            })
-        if mlflow_log:
-            mlflow.log_metric('iter', iter_num ) 
-            mlflow.log_metric('train_loss', lossf)
-            mlflow.log_metric('lr', lr)
-            mlflow.log_metric('mfu', running_mfu*100)
-
-
-
-    iter_num += 1
-    local_iter_num += 1
-
-    # termination conditions
-    if iter_num > max_iters:
-        break
-
-if ddp:
-    destroy_process_group()
+print('checkpoint uploaded')

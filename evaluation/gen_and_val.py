@@ -6,6 +6,7 @@ import os
 import re
 import chess
 import sys
+from tqdm import tqdm
 from model import GPT, GPTConfig  # Ensure model.py is in the same directory or adjust the import path accordingly
  
 
@@ -71,7 +72,7 @@ def load_model(checkpoint_path, device):
     model.eval()  # Set model to evaluation mode
     return model
 
-def generate_next_move(model, prompt_pgn, move_number, stoi, itos, device, verbose = False, max_length=1024, temperature=1.0):
+def generate_next_move(model, prompt_pgn, move_number, stoi, itos, device, verbose = False, max_length=1024, temperature=1.0, deterministic = False):
     """
     Generates the next move in PGN format using the GPT model.
 
@@ -111,15 +112,23 @@ def generate_next_move(model, prompt_pgn, move_number, stoi, itos, device, verbo
 
         with torch.no_grad():
             # Forward pass
-            logits, _ = model(input_tensor)  # logits shape: (1, seq_len, vocab_size)
+            try:
+                logits, _ = model(input_tensor)  # logits shape: (1, seq_len, vocab_size)
+            except Exception as e:
+                if verbose:
+                    print(f"Got the following error {e}")
+                    print(f"we got to prompting with this prompt {prompt_pgn} of length {len(prompt_pgn)}")
+                break
+
             # Focus on the last token's logits to predict the next token
             last_token_logits = logits[:, -1, :] / temperature  # Shape: (1, vocab_size)
-
-            # Compute probabilities
-            probabilities = F.softmax(last_token_logits, dim=-1)  # Shape: (1, vocab_size)
-
-            # Sample a token
-            sampled_token = torch.multinomial(probabilities, num_samples=1)  # Shape: (1, 1)
+            if deterministic:
+                sampled_token = last_token_logits.argmax(dim = -1).unsqueeze(0)
+            else:
+                # Compute probabilities
+                probabilities = F.softmax(last_token_logits, dim=-1)  # Shape: (1, vocab_size)
+                # Sample a token
+                sampled_token = torch.multinomial(probabilities, num_samples=1)  # Shape: (1, 1)
 
             # Convert token ID to character
             sampled_char = detokenize(sampled_token.cpu().tolist()[0], itos)
@@ -209,7 +218,7 @@ def run_validation(args):
     current_pgn = ';'
 
     # Iterate through each move in the PGN
-    for idx, move in enumerate(moves):
+    for idx, move in enumerate(tqdm(moves, desc = f'Processing moves', unit="move")):
         move_number = idx + 1
 #        print(f'Playing move {move_number}')
         player = "White" if board.turn == chess.WHITE else "Black"
@@ -225,7 +234,7 @@ def run_validation(args):
             move_prefix = ""
         prompt_pgn = current_pgn + move_prefix
         # Generate the next move
-        generated_move = generate_next_move(model, prompt_pgn, move_number, stoi, itos, args.device, verbose = args.verbose, temperature=args.temperature)
+        generated_move = generate_next_move(model, prompt_pgn, move_number, stoi, itos, args.device, verbose = args.verbose, temperature=args.temperature, deterministic=args.deterministic)
         total_generated_moves += 1
         if args.verbose:
             print(f"Generated Move {move_number}: {generated_move}")
@@ -241,7 +250,7 @@ def run_validation(args):
                 print(f"Move {move_number}: Generated move '{generated_move}' is ILLEGAL.\n")
             illegal_moves_count += 1
             illegal_move_positions.append(1)
-#            illegal_moves_examples.append((move_number, player, generated_move, "Illegal move generated"))
+            illegal_moves_examples.append((move_number, player, generated_move, "Illegal move generated"))
 #            illegal_moves_board.append(chess.Board())
 #            illegal_move_pgns.append(current_pgn)
             print(f'Move num {move_number}, playing as {player}, played {generated_move}')
@@ -312,6 +321,7 @@ def main():
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help='Device to run the model on')
     parser.add_argument('--temperature', type=float, default=1.0, help='Sampling temperature for move generation (default: 1.0)')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output for debugging')
+    parser.add_argument('--deterministic', action='store_true', help='Enable verbose output for debugging')
     parser.add_argument('--graph', action='store_true', help='Enable verbose output for debugging')
     parser.add_argument('--illegal_info', action='store_true', help='Enable verbose output for debugging')
 
