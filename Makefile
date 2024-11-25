@@ -4,10 +4,6 @@ PREPARE := data/lichess_hf_dataset/prepare.py
 CHECKPOINT := evaluation/eval_models/checkpoint16Mb.pth
 DATA_DIR := data/lichess_hf_dataset
 TEMPERATURE := 1.0
-BENCHMARK_PRECOMPUTE := evaluation/precompute_moves.pkl
-EVAL_RANDOM_PGN := evaluation/random15M.pgn
-BENCHMARK1 := benchmark1.py
-
 
 ##RANDOM GENERATED 80 MOVES
 #INPUT_PGN := ';1. c3 c6 2. e3 Nf6 3. Ba6 Nd5 4. Bd3 f5 5. f4 Nxe3 6. b4 e6 7. c4 Nc2+ 8. Kf1 Bxb4 9. Nh3 Nxa1 10. Bb2 b6 11. Ng5 Bf8 12. Be5 Ba6 13. Qh5+ Ke7 14. Bc3 Bb7 15. Kg1 e5 16. Bc2 exf4 17. Qg6 Nb3 18. Na3 f3 19. Qe6+ dxe6 20. Bf6+ Kd7 21. Be7 Ba6 22. Bb1 Na5 23. Nxf3 Bxe7 24. Ne1 Kc7 25. Bxf5 Qxd2 26. Bh3 Qd5 27. g3 Bb4 28. Bg2 Bxa3 29. g4 h6 30. Bxd5 cxd5 31. Nf3 Rf8 32. h4 b5 33. g5 Be7 34. gxh6 Kd6 35. Rh3 Rh8 36. Ne1 Kc7 37. Rg3 Rxh6 38. Ra3 Bxa3 39. Kf1 Kb6 40. Nc2 bxc4 41. Ne3 Bb4 42. Nxc4+ Bxc4+ 43. Kg2 Be7 44. Kh3 Ba6 45. Kh2 Rh5 46. Kg3 Ba3 47. Kg4 Kb7 48. Kh3 Be7 49. Kh2 d4 50. a3 Rh6 51. Kh3 g5 52. a4 d3 53. Kg3 Bc5 54. Kh2 Bd6+ 55. Kh1 Bh2 56. Kg2 d2 57. Kh3 gxh4 58. Kg4 Nc4 59. Kg5 Bb5 60. Kxh6 Ba6 61. Kg6 Nd7 62. Kh7 Bc7 63. Kg7 Kb6 64. Kf7 Nd6+ 65. Kxe6 Nc8 66. Kxd7 d1=R+ 67. Ke6 Ne7 68. Kf6 Rf8+ 69. Kxe7 Bd3 70. Kd7 Rd2 71. a5+ Ka6 72. Ke7 Rh2 73. Kd7 Rh3 74. Ke6 Bxa5 75. Ke7 Kb7 76. Kd7 Re8 77. Kxe8 Bc3 78. Ke7 Rh1 79. Kd8 Ba1 80. Ke7 Rd1 81. Kd7 Rh1 82. Ke7 Bb2 83. Kf'
@@ -62,13 +58,35 @@ generate_deterministic_moves:
 		--input $(INPUT_PGN) \
 		--data_dir $(DATA_DIR) \
 		--deterministic \
-	
+
+
+##BENCHMARKING
+BENCHMARK_GAMES := 1000
+BENCHMARK_CSV := evaluation/benchmark_games.csv
+BENCHMARK_PGN := evaluation/benchmark_games.pgn
+BENCHMARK_PRECOMPUTE := evaluation/precompute_moves.pkl
+BENCHMARK1 := benchmark1.py
+
+
+
 precompute_benchmark:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
 		precompute \
-		--pgn_files $(EVAL_RANDOM_PGN) \
+		--pgn_files $(BENCHMARK_PGN) \
 		--output_file $(BENCHMARK_PRECOMPUTE) \
-		--troubleshoot_verbose \
+
+generate_benchmark_games:
+	$(PYTHON) data/lichess_hf_dataset/random/gen_random.py \
+		--num_games $(BENCHMARK_GAMES) \
+		--output_file $(BENCHMARK_CSV)
+	$(PYTHON) data/lichess_hf_dataset/random/toPGN.py \
+		--csv_file $(BENCHMARK_CSV) \
+		--pgn_file $(BENCHMARK_PGN) \
+		--move_column transcript
+
+generate_precompute_random_benchmark_games: generate_benchmark_games precompute_benchmark
+
+	
 
 benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
