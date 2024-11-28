@@ -21,10 +21,8 @@ __pycache__
 *.csv
 checkpoint.pth
 identify_mistake.py
-evaluation/eval_models/checkpoint16Ma.pth
 models
 checkpoint20K.pth
-evaluation/eval_models
 evaluation/precompute_moves.pkl
 precompute_moves.pkl
 evaluation/random15M.pgn
