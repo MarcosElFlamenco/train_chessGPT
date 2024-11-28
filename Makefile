@@ -61,7 +61,7 @@ generate_deterministic_moves:
 
 
 ##BENCHMARKING
-BENCHMARK_GAMES := 1000
+BENCHMARK_GAMES := 100
 BENCHMARK_CSV := evaluation/benchmark_games.csv
 BENCHMARK_PGN := evaluation/benchmark_games.pgn
 BENCHMARK_PRECOMPUTE := evaluation/precompute_moves.pkl
@@ -92,10 +92,12 @@ benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
 		eval \
 		--checkpoint $(CHECKPOINT) \
-		--input_pgn $(EVAL_RANDOM_PGN) \
+		--input_pgn $(BENCHMARK_PGN) \
 		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
 		--data_dir $(DATA_DIR) \
 		--temperature $(TEMPERATURE) \
+
+full_benchmark: generate_precompute_random_benchmark_games benchmark_model
 
 remote_benchmark_model:
 	sky jobs launch -c benchmarkCluster remote/benchmark.yaml

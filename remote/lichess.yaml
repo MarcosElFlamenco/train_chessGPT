@@ -3,6 +3,7 @@ name: lichess_train
 resources:
   # Use spot instances to save cost.
   accelerators: A10G
+  region: eu-west-3
   use_spot: true
 
 

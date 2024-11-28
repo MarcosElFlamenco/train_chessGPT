@@ -40,7 +40,6 @@ def csv_to_pgn(csv_file, pgn_file, move_column='transcript'):
             # Create PGN headers with placeholder values
             pgn.write('[Event "Converted from CSV"]\n')
             pgn.write('[Result "*"]\n\n')  # '*' indicates an unfinished game
-            print(f"this is the move lisr {move_list[:-6]}")
             # Write the move list
             # Ensure that the move list ends with a space for proper parsing
             formatted_moves = move_list[:-6].strip() + ' *\n\n'
