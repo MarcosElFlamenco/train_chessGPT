@@ -25,6 +25,7 @@ from contextlib import nullcontext
 
 import numpy as np
 import torch
+import zipfile
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 from download_dataset import download_bins_from_s3
@@ -95,16 +96,24 @@ config = {k: globals()[k] for k in config_keys} # will be useful for logging
 train_name = f'train{data_type}.bin'
 val_name = f'val{data_type}.bin'
 
+zipped_train_name = f'train{data_type}.zip'
+zipped_val_name = f'val{data_type}.zip'
+
+
 
 data_dir = os.path.join('data', dataset)
 train_file = os.path.join(data_dir, train_name)
 val_file = os.path.join(data_dir, val_name)
 
 print('Downloading datasets')
-print(f'Downloading {train_name}...')
-download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=train_name,file_name=train_file )
-print(f'Downloading {val_name}...')
-download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=val_name,file_name=val_file )
+print(f"Downloading {train_name} (it's zipped)...")
+download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=zipped_train_name,file_name=train_file )
+print(f"Downloading {val_name} (it's zipped)...")
+download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=zipped_val_name,file_name=val_file )
+with zipfile.ZipFile(zipped_train_name, 'r') as zip_ref:
+    zip_ref.extractall(train_name)
+with zipfile.ZipFile(zipped_val_name, 'r') as zip_ref:
+    zip_ref.extractall(val_name)
 
 
 
