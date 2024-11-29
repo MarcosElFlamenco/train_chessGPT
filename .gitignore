@@ -19,6 +19,7 @@ mlruns/
 __pycache__
 '__pycache__ copy'
 *.csv
+*.zip
 checkpoint.pth
 identify_mistake.py
 evaluation/eval_models/checkpoint16Ma.pth

@@ -1,7 +1,7 @@
 PYTHON := python3
 HF_REPO := MarcosElFlamenco/chess_games
 
-BASE := under1500_16G
+BASE := lichess_9gb
 CSV_FILE := $(BASE).csv
 BLOCKS_FILE := $(BASE)_blocks.csv
 
@@ -16,15 +16,6 @@ MAX_ELO := 1500
 MIN_LEN := 300
 INPUT_LENGTH := 1023
 TEST_SIZE := 0.01
-
-BIN_CATEGORY := 15M
-RANDOM := random$(BIN_CATEGORY)
-RANDOM_CSV := $(RANDOM).csv
-RANDOM_PGN := $(RANDOM).pgn
-RANDOM_BLOCKS := $(RANDOM)_blocks.csv
-NUM_RANDOM_GAMES := 10
-RANDOM_GEN_LOG_FREQ := 10000
-RANDOM_GEN_SAVE_FREQ := 50000
 
 
 OCT14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-10.pgn.zst
@@ -75,7 +66,8 @@ cast:
 blocks:
 	python3 filter/csv_to_blocks.py \
 		--input_file $(CSV_FILE) \
-		--input_length $(INPUT_LENGTH)
+		--input_length $(INPUT_LENGTH) \
+		--csv_type noquotes
 
 block_zip:
 	python3 zip_all.py \
@@ -120,6 +112,17 @@ hfdataset: download csv blocks block_zip uploads3 tokens bin_zip uploads3
 ## should be the entire pipeline for exporting a folder of pgn transcripts into a huggingface dataset
 ## with elos between min and max elo
 	echo 'pipeline finished'
+
+##random generation
+BIN_CATEGORY := 15M
+RANDOM := random$(BIN_CATEGORY)
+RANDOM_CSV := $(RANDOM).csv
+RANDOM_PGN := $(RANDOM).pgn
+RANDOM_BLOCKS := $(RANDOM)_blocks.csv
+NUM_RANDOM_GAMES := 10
+RANDOM_GEN_LOG_FREQ := 10000
+RANDOM_GEN_SAVE_FREQ := 50000
+
 
 random_csv:
 	python3 random/gen_random.py \
