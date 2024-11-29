@@ -1,6 +1,6 @@
 import boto3
 import torch
-
+from tqdm import tqdm
 
 def empty_s3_bucket(bucket_name):
     s3 = boto3.resource('s3')
@@ -46,3 +46,17 @@ def load_checkpoint(bucket_name, checkpoint_key, device):
     else:
         return None
 
+
+def download_bins_from_s3_with_progress(bucket_name, object_name, file_name):
+    s3 = boto3.client('s3')
+
+    # Get the size of the file from S3 to set up the progress bar
+    response = s3.head_object(Bucket=bucket_name, Key=object_name)
+    total_size_in_bytes = response['ContentLength']
+
+    # Open the file locally in binary write mode
+    with open(file_name, 'wb') as f:
+        # Use tqdm to create the progress bar
+        with tqdm(total=total_size_in_bytes, unit='B', unit_scale=True, desc=f"Downloading {object_name}") as bar:
+            # Download the file in chunks and update the progress bar
+            s3.download_fileobj(Bucket=bucket_name, Key=object_name, Fileobj=f, Callback=lambda bytes_transferred: bar.update(bytes_transferred))

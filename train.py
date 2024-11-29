@@ -31,7 +31,7 @@ from torch.distributed import init_process_group, destroy_process_group
 from download_dataset import download_bins_from_s3
 
 from model import GPTConfig, GPT
-from remote.save_checkpoints import upload_checkpoint, load_checkpoint
+from remote.save_checkpoints import upload_checkpoint, load_checkpoint, download_bins_from_s3_with_progress
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -76,7 +76,7 @@ min_lr = 6e-5 # minimum learning rate, should be ~= learning_rate/10 per Chinchi
 backend = 'nccl' # 'nccl', 'gloo', etc.
 
 data_type = '1M'
-checkpoint_key = 'checkpoint.pth'
+checkpoint_key = 'lichess_8layers_progames.pth'
 bucket_name = 'chess-checkpoint-craft'
 
 # system
@@ -92,28 +92,29 @@ config = {k: globals()[k] for k in config_keys} # will be useful for logging
 #s3 settings
 
 
+data_bucket_name = "bins-bucket-craft"
+data_dir = os.path.join('data', dataset)
 
 train_name = f'train{data_type}.bin'
 val_name = f'val{data_type}.bin'
+train_path = os.path.join(data_dir, train_name)
+val_path = os.path.join(data_dir, val_name)
 
-zipped_train_name = f'train{data_type}.zip'
-zipped_val_name = f'val{data_type}.zip'
-
-
-
-data_dir = os.path.join('data', dataset)
-train_file = os.path.join(data_dir, train_name)
-val_file = os.path.join(data_dir, val_name)
-
-print('Downloading datasets')
-print(f"Downloading {train_name} ...")
-download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=train_name,file_name=train_file )
-print(f"Downloading {val_name} ...")
-download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=val_name,file_name=val_file )
+print(f" the s3 bucket is {data_bucket_name}")
+if os.path.isfile(train_path):
+    print("Train file already exists, skipping download")
+else:
+    print(f"Downloading {train_name} ...")
+    download_bins_from_s3_with_progress(bucket_name=data_bucket_name, object_name=train_name,file_name=train_path )
+if os.path.isfile(train_path):
+    print("Val file already exists, skipping download")
+else:
+    print(f"Downloading {val_name} ...")
+    download_bins_from_s3_with_progress(bucket_name=data_bucket_name, object_name=val_name,file_name=val_path )
 #with zipfile.ZipFile(zipped_train_name, 'r') as zip_ref:
-    #zip_ref.extractall(train_name)
+#zip_ref.extractall(train_name)
 #with zipfile.ZipFile(zipped_val_name, 'r') as zip_ref:
-    #zip_ref.extractall(val_name)
+#zip_ref.extractall(val_name)
 
 
 
@@ -154,8 +155,8 @@ ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=
 
 ##Ill start here
 # poor man's data loader
-train_data = np.memmap(train_file, dtype=np.uint8, mode='r')
-val_data = np.memmap(val_file, dtype=np.uint8, mode='r')
+train_data = np.memmap(train_path, dtype=np.uint8, mode='r')
+val_data = np.memmap(val_path, dtype=np.uint8, mode='r')
 
 
 def get_batch(split):

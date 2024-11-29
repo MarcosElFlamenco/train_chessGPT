@@ -34,5 +34,5 @@ warmup_iters = 2000  # not super necessary potentially
 compile = True
 
 data_type = '9gb'
-checkpoint_key = 'checkpoint.pth'
+checkpoint_key = 'lichess_firstRun.pth'
 bucket_name = 'bigger-model'
