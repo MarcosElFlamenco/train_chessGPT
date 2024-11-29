@@ -106,14 +106,14 @@ train_file = os.path.join(data_dir, train_name)
 val_file = os.path.join(data_dir, val_name)
 
 print('Downloading datasets')
-print(f"Downloading {train_name} (it's zipped)...")
-download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=zipped_train_name,file_name=train_file )
-print(f"Downloading {val_name} (it's zipped)...")
-download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=zipped_val_name,file_name=val_file )
-with zipfile.ZipFile(zipped_train_name, 'r') as zip_ref:
-    zip_ref.extractall(train_name)
-with zipfile.ZipFile(zipped_val_name, 'r') as zip_ref:
-    zip_ref.extractall(val_name)
+print(f"Downloading {train_name} ...")
+download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=train_name,file_name=train_file )
+print(f"Downloading {val_name} ...")
+download_bins_from_s3(bucket_name='bins-bucket-craft', object_name=val_name,file_name=val_file )
+#with zipfile.ZipFile(zipped_train_name, 'r') as zip_ref:
+    #zip_ref.extractall(train_name)
+#with zipfile.ZipFile(zipped_val_name, 'r') as zip_ref:
+    #zip_ref.extractall(val_name)
 
 
 
