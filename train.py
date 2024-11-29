@@ -200,7 +200,7 @@ if init_from == 'resume':
     ckpt_path = os.path.join(out_dir, 'ckpt.pt')
     checkpoint = load_checkpoint(bucket_name, checkpoint_key, device)
     if checkpoint == None:
-        print('there was no checkpoint')
+        print('There was no checkpoint')
         init_from = 'scratch'
     else:
         checkpoint_model_args = checkpoint['model_args']
