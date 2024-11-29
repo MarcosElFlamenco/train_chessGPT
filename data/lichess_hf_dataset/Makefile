@@ -17,6 +17,8 @@ MIN_LEN := 300
 INPUT_LENGTH := 1023
 TEST_SIZE := 0.01
 
+BASE := 9gb
+
 
 OCT14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-10.pgn.zst
 NOV14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-11.pgn.zst
@@ -68,16 +70,22 @@ blocks:
 		--input_file $(CSV_FILE) \
 		--input_length $(INPUT_LENGTH) \
 		--csv_type noquotes
+tokens:
+	python3 tokenizeData.py \
+		--blocks_file $(BLOCKS_FILE) \
+		--bin_dir $(BIN_DIR) \
+		--test_size $(TEST_SIZE)
+
 
 block_zip:
 	python3 zip_all.py \
-		--csv_file $(CSV_FILE) \
+		--csv_file dummy \
 		--zip_directory $(ZIP_DIR) \
 		--bin_directory $(BIN_DIR) \
 		--files blocks
 bin_zip:
-	python3 zip_all.py \
-		--csv_file $(CSV_FILE) \
+	python3 filter/zip_all.py \
+		--base $(BASE) \
 		--zip_directory $(ZIP_DIR) \
 		--bin_directory $(BIN_DIR) \
 		--files bins
@@ -94,12 +102,6 @@ uploads3:
 		--local_dir $(ZIP_DIR) \
 		--bucket $(S3_BUCKET) \
 		--s3_dir $(S3_DIR)
-
-tokens:
-	python3 tokenizeData.py \
-		--blocks_file $(BLOCKS_FILE) \
-		--bin_dir $(BIN_DIR) \
-		--test_size $(TEST_SIZE)
 
 
 filter_remote: clean

@@ -24,7 +24,7 @@ def zip_file_with_progress(zip_dir, input_file, output_zip, chunk_size=1024*1024
         
  
 # Initialize the zip file
-    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zipf:
         # Open the zip entry for writing
         with zipf.open(os.path.basename(input_file), 'w') as dest_file:
             # Open the source file for reading in binary mode
@@ -47,7 +47,7 @@ def main():
     """
     # Initialize argument parser
     parser = argparse.ArgumentParser(description='Process a CSV file and push the dataset to Hugging Face Hub.')
-    parser.add_argument('--csv_file', type=str, required=True, help='Path to the input CSV file')
+    parser.add_argument('--base', type=str, required=True, help='Path to the input CSV file')
     parser.add_argument('--zip_directory', type=str, required=True, help='Path to the input CSV file')
     parser.add_argument('--bin_directory', type=str, required=True, help='Path to the input CSV file')
     parser.add_argument('--files', type=str, required=True, help='Path to the input CSV file')
@@ -56,19 +56,13 @@ def main():
     args = parser.parse_args()
 
     # Extract the CSV file path
-    csv_file = args.csv_file
+    base = args.base
     zip_directory = args.zip_directory
     bin_directory = args.bin_directory
     files = args.files
 
-    # Validate the CSV file exists
-    if not os.path.isfile(csv_file):
-        print(f"Error: CSV file '{csv_file}' does not exist.")
-        exit(1)
-
     # Generate the blocks filename by replacing '.csv' with '_blocks.csv'
-    base, ext = os.path.splitext(csv_file)
-    blocks_filename = f"{base}_blocks{ext}"
+    blocks_filename = f"{base}_blocks.csv"
     train_bin_filename = os.path.join(bin_directory, 'train.bin')
     val_bin_filename = os.path.join(bin_directory, 'val.bin')
 
@@ -79,14 +73,6 @@ def main():
     val_bin_zip =  os.path.join(zip_directory, f'{base}_val_bin.zip')
 
     if files == 'blocks':
-        # Zip the main CSV file with a progress bar
-        if os.path.isfile(csv_file):
-            print(f"Starting to zip '{csv_file}' into '{csv_zip}'...")
-            zip_file_with_progress(zip_directory, csv_file, csv_zip)
-            print(f"Finished zipping '{csv_file}' into '{csv_zip}'.\n")
-        else:
-            print(f"Warning: Blocks file '{csv_file}' does not exist. Skipping zipping of this file.")
-
         # Check if the blocks CSV file exists before attempting to zip
         if os.path.isfile(blocks_filename):
             print(f"Starting to zip '{blocks_filename}' into '{blocks_zip}'...")
