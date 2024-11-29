@@ -24,20 +24,30 @@ parser = argparse.ArgumentParser(description='Process a CSV file with transcript
 parser.add_argument('--input_file', type=str, help='The path to the input CSV file')
 parser.add_argument('--input_length', type=int, help='The length to truncate the transcript to')
 parser.add_argument('--give_stats', type=int, help='The length to truncate the transcript to')
+parser.add_argument('--csv_type', type=str, help='The length to truncate the transcript to')
 
 args = parser.parse_args()
 input_file = args.input_file
 input_length = args.input_length
 output_filename = input_file.replace('.csv', '_blocks.csv')
 
-df = pd.read_csv(
+if args.csv_type == "quotes":
+    df = pd.read_csv(
+        input_file, 
+        delimiter='|',
+        quotechar='"',
+        quoting=csv.QUOTE_ALL,
+        encoding='utf-8',
+        usecols=["transcript"]
+    )
+else:
+    df = pd.read_csv(
     input_file, 
-    delimiter='|',
-    quotechar='"',
-    quoting=csv.QUOTE_ALL,
+    delimiter=',',
+    quoting=csv.QUOTE_NONE,  # No quotes in the CSV
     encoding='utf-8',
     usecols=["transcript"]
-)
+    )
 
 # Apply the transform_text function
 df['transcript'] = df['transcript'].apply(lambda text: transform_text(text, input_length))
