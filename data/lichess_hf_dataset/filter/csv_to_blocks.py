@@ -23,7 +23,6 @@ def transform_text(text, input_length):
 parser = argparse.ArgumentParser(description='Process a CSV file with transcripts.')
 parser.add_argument('--input_file', type=str, help='The path to the input CSV file')
 parser.add_argument('--input_length', type=int, help='The length to truncate the transcript to')
-parser.add_argument('--give_stats', type=int, help='The length to truncate the transcript to')
 parser.add_argument('--csv_type', type=str, help='The length to truncate the transcript to')
 
 args = parser.parse_args()

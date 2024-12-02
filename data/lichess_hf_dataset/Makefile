@@ -116,7 +116,7 @@ hfdataset: download csv blocks block_zip uploads3 tokens bin_zip uploads3
 	echo 'pipeline finished'
 
 ##random generation
-BIN_CATEGORY := 15M
+BIN_CATEGORY := 
 RANDOM := random$(BIN_CATEGORY)
 RANDOM_CSV := $(RANDOM).csv
 RANDOM_PGN := $(RANDOM).pgn
@@ -135,7 +135,7 @@ random_blocks:
 	python3 filter/csv_to_blocks.py \
 		--input_file $(RANDOM_CSV) \
 		--input_length $(INPUT_LENGTH) \
-		--give_stats 0
+		--csv_type quotes
 
 random_tokens:
 	python3 tokenizeData.py \
