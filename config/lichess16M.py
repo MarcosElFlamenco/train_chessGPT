@@ -9,7 +9,7 @@ always_save_checkpoint = False
 
 wandb_log = True 
 mlflow_log = False 
-wandb_project = "chess-gpt-batch"
+wandb_project = "chess-gpt-lichesstrain"
 wandb_run_name = "8layer_lichess"
 
 dataset = "lichess_hf_dataset"
@@ -34,5 +34,5 @@ warmup_iters = 2000  # not super necessary potentially
 compile = True
 
 data_type = '9gb'
-checkpoint_key = 'lichess_firstRun.pth'
+checkpoint_key = 'lichess_8layer_16M.pth'
 bucket_name = 'bigger-model'
