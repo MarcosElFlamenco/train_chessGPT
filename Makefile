@@ -3,7 +3,7 @@ TRAIN := train.py
 PREPARE := data/lichess_hf_dataset/prepare.py
 CHECKPOINT := evaluation/eval_models/checkpoint16Mb.pth
 DATA_DIR := data/lichess_hf_dataset
-CONFIG := lichess16M.py
+CONFIG := local.py
 
 train: $(TRAIN) 
 	$(PYTHON) $(TRAIN) \
@@ -38,9 +38,8 @@ print_legal_moves:
 ##TEST SECOND GAME
 
 INPUT_PGN := ";1. g4 g5 2. f4 f5 3. h4 b6 4. b4 Nh6 5. Ba3 a6 6. h5 Bg7 7. Bc1 a5 8. a4 c6 9. fxg5 Rg8 10. Rh3 Nf7 11. h6 e5 12. Rf3 b5 13. d3 Ra7 14. Rxf5 Na6 15. Qd2 d5 16. Qc3 Bxh6 17. Bh3 Qd6 18. Nd2 Nb8 19. Rb1 Qf6 20. Bb2 Qe6 21. Qxc6+ Rd7 22. Qb6 Bb7 23. Rxe5 Nxg5 24. c4 Rg6 25. Rxd5 bxc4 26. Rb5 Nxh3 27. Nxc4 Bh1 28. g5 Qf6 29. Qb7 Nxg5 30. e3 Qd6 31. d4 Qe7 32. Nb6 Rxd4 33. Nc8 Rg8 34. Ke2 Rxb4 35. Qe4 Qe5 36. Bc1 Bf3+ 37. Kd3 Ne6 38. Qxf3 Rg7 39. Qd1 Qe4+ 40. Kd2 Qxb1 41. Qf3 Bg5 42. Qf8+ Nxf8 43. Nd6+ Ke7 44. Rxg5 Qa1 45. Ke2 Qb2+ 46. Ke1 Qc2 47. Rc5 Qe2+ 48. Nxe2 Nc6 49. Rh5 Rb7 50. Rh6 Ng6 51. Kd1 Kf8 52. Nc8 Rb4 53. Nb6 Nf4 54. Rxc6 Nd3 55. Ng3 Rd4 56. Nh1 Re7 57. Rc3 Rc7 58. Bd2 Rc6 59. Ra3 Rxb6 60. Ra1 Nc1 61. Nf2 Rg4 62. Bxc1 Ke8 63. Bb2 Rbg6 64. Bh8 Rd4+ 65. Kc2 Rgg4 66. Bg7 Rdf4 67. Rc1 Rg6 68. Kc3 Kd7 69. Kd3 Rg2 70. Ng4 Rff2 71. Nxf2 Rg3 72. Rc5 Ke7 73. Kc2 Rxe3 74. Rxa5 Rg3 75. Nd1 Rg4 76. Kb2 Rxa4 77. Be5 Kf8 78. Ra8+ Rxa8 79. Bg7+ Kg8 80. Bf8 Ra6 81. Ba3 Kg7 82. Ka2 Re6 83. Kb1 Re2 84. Nc3 Re5 85. K"
-
-
 TEMPERATURE := 1.0
+
 generate_vanilla:
 	$(PYTHON) evaluation/model_generate.py \
 		--checkpoint $(CHECKPOINT) \
@@ -61,15 +60,12 @@ generate_deterministic_moves:
 		--data_dir $(DATA_DIR) \
 		--deterministic \
 
-
 ##BENCHMARKING
 BENCHMARK_GAMES := 100
 BENCHMARK_CSV := evaluation/benchmark_games.csv
 BENCHMARK_PGN := evaluation/benchmark_games.pgn
 BENCHMARK_PRECOMPUTE := evaluation/precompute_moves.pkl
 BENCHMARK1 := benchmark1.py
-
-
 
 precompute_benchmark:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
@@ -87,8 +83,6 @@ generate_benchmark_games:
 		--move_column transcript
 
 generate_precompute_random_benchmark_games: generate_benchmark_games precompute_benchmark
-
-	
 
 benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK1) \

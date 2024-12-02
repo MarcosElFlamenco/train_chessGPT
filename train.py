@@ -90,7 +90,8 @@ exec(open('configurator.py').read()) # overrides from command line or config fil
 config = {k: globals()[k] for k in config_keys} # will be useful for logging
 # -----------------------------------------------------------------------------
 #s3 settings
-
+verbose = True
+print(f"decay lr {decay_lr}")
 
 data_bucket_name = "bins-bucket-craft"
 data_dir = os.path.join('data', dataset)
@@ -106,7 +107,7 @@ if os.path.isfile(train_path):
 else:
     print(f"Downloading {train_name} ...")
     download_bins_from_s3_with_progress(bucket_name=data_bucket_name, object_name=train_name,file_name=train_path )
-if os.path.isfile(train_path):
+if os.path.isfile(val_path):
     print("Val file already exists, skipping download")
 else:
     print(f"Downloading {val_name} ...")
@@ -328,6 +329,7 @@ t0 = time.time()
 local_iter_num = 0 # number of iterations in the lifetime of this process
 raw_model = model.module if ddp else model # unwrap DDP container if needed
 running_mfu = -1.0
+grad_norms = []
 while True:
     # determine and set the learning rate for this iteration
     lr = get_lr(iter_num) if decay_lr else learning_rate
@@ -340,6 +342,11 @@ while True:
         train_loss_list.append(losses['train'])
         val_loss_list.append(losses['val'])
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+        avg, min, max = 0,0,0
+        if(len(grad_norms) != 0):
+            avg = sum(grad_norms)/len(grad_norms)
+            min = min(grad_norms)
+            max = max(grad_norms)
         if wandb_log:
             wandb.log({
                 "iter": iter_num,
@@ -347,7 +354,12 @@ while True:
                 "val/loss": losses['val'],
                 "lr": lr,
                 "mfu": running_mfu*100, # convert to percentage
+                "avg_gardient_norm": avg,
+                "max_gradient_norm": max,
+                "min_gradient_norm": min
             })
+            gradient_norms = []
+
 
         if mlflow_log:
             mlflow.log_metric('iter', iter_num ) 
@@ -400,7 +412,10 @@ while True:
     # clip the gradient
     if grad_clip != 0.0:
         scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        if verbose:
+            print(f'The total norm is {total_norm}')
+        grad_norms.append(total_norm)
     # step the optimizer and scaler if training in fp16
     scaler.step(optimizer)
     scaler.update()

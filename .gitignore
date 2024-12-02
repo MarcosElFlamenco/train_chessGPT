@@ -29,3 +29,5 @@ precompute_moves.pkl
 evaluation/random15M.pgn
 evaluation/benchmark_games.pgn
 evaluation/randomBenchmarkGames.pgn
+data/lichess_hf_dataset/train9gb.bin
+data/lichess_hf_dataset/val9gb.bin
