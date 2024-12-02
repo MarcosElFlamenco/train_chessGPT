@@ -9,6 +9,14 @@ train: $(TRAIN)
 	$(PYTHON) $(TRAIN) \
 		config/$(CONFIG)
 
+##REMOTE
+query_spot_prices:
+	aws ec2 describe-spot-price-history \
+	--region eu-west-2 \
+	--start-time 2024-11-02T11:53:15Z \
+	--instance-types g5.4xlarge g5.xlarge g5.2xlarge g5.8xlarge g5.16xlarge \
+	--output table
+
 setup_checkpoint:
 	python3 setupCheckpoint.py \
 		config/random15M.py
@@ -16,7 +24,7 @@ setup_checkpoint:
 prepare: $(PREPARE)
 	$(PYTHON) $(PREPARE)
 
-remote_train: clean_bins
+remote_train: 
 	sky jobs launch -c boardCluster --env WANDB_API_KEY remote/lichess.yaml
 
 toy_remote: $(MAIN)

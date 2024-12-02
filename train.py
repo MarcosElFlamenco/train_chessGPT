@@ -79,6 +79,7 @@ data_type = '1M'
 checkpoint_key = 'lichess_8layers_progames.pth'
 bucket_name = 'chess-checkpoint-craft'
 
+verbose = False
 # system
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
@@ -90,10 +91,9 @@ exec(open('configurator.py').read()) # overrides from command line or config fil
 config = {k: globals()[k] for k in config_keys} # will be useful for logging
 # -----------------------------------------------------------------------------
 #s3 settings
-verbose = True
 print(f"decay lr {decay_lr}")
 
-data_bucket_name = "bins-bucket-craft"
+data_bucket_name = "chess-data-bucket-craft"
 data_dir = os.path.join('data', dataset)
 
 train_name = f'train{data_type}.bin'

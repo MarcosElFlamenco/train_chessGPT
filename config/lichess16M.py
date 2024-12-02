@@ -35,4 +35,5 @@ compile = False
 
 data_type = '9gb'
 checkpoint_key = 'lichess_8layer_16M.pth'
-bucket_name = 'bigger-model'
+bucket_name = 'chess-gpt-checkpoints'
+verbose = False

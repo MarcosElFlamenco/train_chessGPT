@@ -36,3 +36,4 @@ beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 
 warmup_iters = 0  # not super necessary potentially
 compile = False
+verbose = True

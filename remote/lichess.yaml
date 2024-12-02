@@ -3,7 +3,7 @@ name: lichess_train
 resources:
   # Use spot instances to save cost.
   accelerators: A10G
-  region: eu-west-3
+  region: eu-west-2
   use_spot: true
 
 
@@ -13,11 +13,11 @@ workdir: ~/train_ChessGPT
 
 file_mounts:
   /checkpoint:
-    source: s3://bins-bucket-craft
+    source: s3://chess-data-bucket-craft
     store: s3
     mode: MOUNT
   /sourcecsv:
-    source: s3://go-bucket-craft
+    source: s3://chess-gpt-checkpoints
     store: s3
     mode: MOUNT
 
