@@ -82,7 +82,7 @@ BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
 BENCHMARK1 := benchmark1.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
-CHECKPOINT := evaluation/eval_models/lichess9gb_8layer_23K.pth
+CHECKPOINT := evaluation/eval_models/random16M_8layer_2K.pth
 
 precompute_benchmark:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
