@@ -4,6 +4,7 @@ resources:
   # Use spot instances to save cost.
   accelerators: A10G
   region: eu-west-2
+  memory: 32+ 
   use_spot: true
 
 
@@ -27,11 +28,14 @@ setup: |
   # Fill in your wandb key: copy from https://wandb.ai/authorize
   # Alternatively, you can use `--env WANDB_API_KEY=$WANDB_API_KEY`
   # to pass the key in the command line, during `sky spot launch`.
-  echo export WANDB_API_KEY=[YOUR-WANDB-API-KEY] >> ~/.bashrc
 
+  echo export WANDB_API_KEY=[YOUR-WANDB-API-KEY] >> ~/.bashrc
   set -e .
   pip install -r remote/sky_req.txt
 
 run: |
   set -e
+  ll
+  ll data
+  ll data/lichess_hf_dataset
   python3 train.py config/lichess16M.py

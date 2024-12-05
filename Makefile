@@ -5,7 +5,7 @@ CHECKPOINT := evaluation/eval_models/checkpoint16Mb.pth
 DATA_DIR := data/lichess_hf_dataset
 CONFIG := local.py
 
-train: $(TRAIN) 
+local_train: $(TRAIN) 
 	$(PYTHON) $(TRAIN) \
 		config/$(CONFIG)
 
@@ -26,6 +26,9 @@ prepare: $(PREPARE)
 
 remote_train: 
 	sky jobs launch -c boardCluster --env WANDB_API_KEY remote/lichess.yaml
+
+remote_nocontroller_train:
+	sky launch -c boardNoSpotCluster --use-spot --env WANDB_API_KEY remote/lichess.yaml
 
 toy_remote: $(MAIN)
 	sky jobs launch -c boardCluster --env WANDB_API_KEY remote/toy.yaml
@@ -124,3 +127,5 @@ clean_bins:
 
 test:
 	python test.py	
+sand:
+	python sandbox.py

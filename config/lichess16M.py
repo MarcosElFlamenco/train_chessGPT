@@ -13,8 +13,8 @@ wandb_project = "chess-gpt-lichesstrain"
 wandb_run_name = "8layer_lichess"
 
 dataset = "lichess_hf_dataset"
-gradient_accumulation_steps = 4
-batch_size = 120
+gradient_accumulation_steps = 10
+batch_size = 20
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
 init_from = 'resume'
 
@@ -25,7 +25,7 @@ n_embd = 512
 dropout = 0.0
 
 learning_rate = 3e-4
-max_iters = 600000
+max_iters =  25000
 lr_decay_iters = max_iters  # make equal to max_iters usually
 min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small

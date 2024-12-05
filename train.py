@@ -80,6 +80,8 @@ checkpoint_key = 'lichess_8layers_progames.pth'
 bucket_name = 'chess-checkpoint-craft'
 
 verbose = False
+local_bypass = False
+
 # system
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
@@ -105,12 +107,12 @@ print(f" the s3 bucket is {data_bucket_name}")
 if os.path.isfile(train_path):
     print("Train file already exists, skipping download")
 else:
-    print(f"Downloading {train_name} ...")
+    print(f"Downloading {train_name} to the following adress {train_path}...")
     download_bins_from_s3_with_progress(bucket_name=data_bucket_name, object_name=train_name,file_name=train_path )
 if os.path.isfile(val_path):
     print("Val file already exists, skipping download")
 else:
-    print(f"Downloading {val_name} ...")
+    print(f"Downloading {val_name} ... to the following adress {val_path}...")
     download_bins_from_s3_with_progress(bucket_name=data_bucket_name, object_name=val_name,file_name=val_path )
 #with zipfile.ZipFile(zipped_train_name, 'r') as zip_ref:
 #zip_ref.extractall(train_name)
@@ -342,23 +344,12 @@ while True:
         train_loss_list.append(losses['train'])
         val_loss_list.append(losses['val'])
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
-        avg, min, max = 0,0,0
-        if(len(grad_norms) != 0):
-            avg = sum(grad_norms)/len(grad_norms)
-            min = min(grad_norms)
-            max = max(grad_norms)
         if wandb_log:
             wandb.log({
                 "iter": iter_num,
-                "train/loss": losses['train'],
-                "val/loss": losses['val'],
-                "lr": lr,
-                "mfu": running_mfu*100, # convert to percentage
-                "avg_gardient_norm": avg,
-                "max_gradient_norm": max,
-                "min_gradient_norm": min
+                "train/loss_eval": losses['train'],
+                "val/loss_eval": losses['val'],
             })
-            gradient_norms = []
 
 
         if mlflow_log:
@@ -368,7 +359,7 @@ while True:
             mlflow.log_metric('lr', lr)
             mlflow.log_metric('mfu', running_mfu*100)
 
-        if losses['val'] < best_val_loss or always_save_checkpoint:
+        if (losses['val'] < best_val_loss or always_save_checkpoint) and (not local_bypass):
             best_val_loss = losses['val']
             if iter_num > 0:
                 checkpoint = {
@@ -385,7 +376,7 @@ while True:
                 local_file_path = os.path.join(out_dir, 'ckpt.pt')
                 torch.save(checkpoint, local_file_path)
                 upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
-    if iter_num == 0 and eval_only:
+    if eval_only and iter_num == 0:
         break
 
     # forward backward update, with optional gradient accumulation to simulate larger batch size
@@ -414,7 +405,10 @@ while True:
         scaler.unscale_(optimizer)
         total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         if verbose:
+            new_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 200)
+            print(f"iter number {iter_num}")
             print(f'The total norm is {total_norm}')
+            print(f"after cliping the total grad norm is {new_norm}")
         grad_norms.append(total_norm)
     # step the optimizer and scaler if training in fp16
     scaler.step(optimizer)
@@ -434,13 +428,24 @@ while True:
             mfu = raw_model.estimate_mfu(batch_size * gradient_accumulation_steps, dt)
             running_mfu = mfu if running_mfu == -1.0 else 0.9*running_mfu + 0.1*mfu
         print(f"iter {iter_num}: loss {lossf:.4f}, time {dt*1000:.2f}ms, mfu {running_mfu*100:.2f}%")
+        grad_avg, grad_min, grad_max = 0,0,0
+        if(len(grad_norms) != 0):
+            grad_avg = sum(grad_norms)/len(grad_norms)
+            grad_min = min(grad_norms)
+            grad_max = max(grad_norms)
+        grad_norms = []
         if wandb_log:
             wandb.log({
                 "iter": iter_num,
                 "train/loss": lossf,
                 "lr": lr,
                 "mfu": running_mfu*100, # convert to percentage
+                "avg_gardient_norm": grad_avg,
+                "max_gradient_norm": grad_max,
+                "min_gradient_norm": grad_min
             })
+
+
         if mlflow_log:
             mlflow.log_metric('iter', iter_num ) 
             mlflow.log_metric('train_loss', lossf)
