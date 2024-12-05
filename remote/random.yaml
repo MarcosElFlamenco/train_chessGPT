@@ -1,4 +1,4 @@
-name: lichess_train
+name: random_train
 
 resources:
   # Use spot instances to save cost.
@@ -35,4 +35,4 @@ setup: |
 
 run: |
   set -e
-  python3 train.py config/lichess16M.py
+  python3 train.py config/random16M.py

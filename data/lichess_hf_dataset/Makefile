@@ -6,8 +6,6 @@ CSV_FILE := $(BASE).csv
 BLOCKS_FILE := $(BASE)_blocks.csv
 
 PGN_DIR := downloaded_pgn
-ZIP_DIR := zipped
-BIN_DIR := binned
 S3_BUCKET := go-bucket-craft
 S3_DIR := dataset
 
@@ -115,8 +113,8 @@ hfdataset: download csv blocks block_zip uploads3 tokens bin_zip uploads3
 ## with elos between min and max elo
 	echo 'pipeline finished'
 
-##random generation
-BIN_CATEGORY := 
+##RANDOM GENERATION
+BIN_CATEGORY := 16MnoS
 RANDOM := random$(BIN_CATEGORY)
 RANDOM_CSV := $(RANDOM).csv
 RANDOM_PGN := $(RANDOM).pgn
@@ -124,6 +122,8 @@ RANDOM_BLOCKS := $(RANDOM)_blocks.csv
 NUM_RANDOM_GAMES := 10
 RANDOM_GEN_LOG_FREQ := 10000
 RANDOM_GEN_SAVE_FREQ := 50000
+ZIP_DIR := zipped
+BIN_DIR := binned
 
 
 random_csv:

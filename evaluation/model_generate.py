@@ -120,6 +120,7 @@ def predict_next_characters(model, input_string, stoi, itos, device, max_length=
 
     with torch.no_grad():
         # Forward pass
+        print(f"input tensor is {input_tensor} of length {len(input_tensor)}")
         logits, _ = model(input_tensor)  # logits shape: (1, seq_len, vocab_size)
 
         # Apply softmax to get probabilities

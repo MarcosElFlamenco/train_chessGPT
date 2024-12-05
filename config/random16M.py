@@ -1,5 +1,5 @@
 out_dir = "chess_saver"
-eval_interval = 1000 ##this is too large
+eval_interval = 2000 ##this is too large
 eval_iters = 100
 # I'm not sure what's going on, but when log_interval == 100, the time per iter is inaccurate and much longer than it should be
 # when running on multiple GPUs. TODO: investigate
@@ -13,8 +13,8 @@ wandb_project = "chess-gpt-batch"
 wandb_run_name = "8layer_lichess"
 
 dataset = "lichess_hf_dataset"
-gradient_accumulation_steps = 4
-batch_size = 120
+gradient_accumulation_steps = 10
+batch_size = 20
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
 init_from = 'resume'
 
@@ -25,14 +25,15 @@ n_embd = 512
 dropout = 0.0
 
 learning_rate = 3e-4
-max_iters = 150000
+max_iters = 50000
 lr_decay_iters = max_iters  # make equal to max_iters usually
 min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 
 warmup_iters = 2000  # not super necessary potentially
-compile = True
+compile = False
 
-data_type = '16M'
-checkpoint_key = 'checkpoint.pth'
-bucket_name = 'bigger-model'
+data_type = '16MnoS'
+checkpoint_key = 'random16M_8layer_A.pth'
+bucket_name = 'chess-gpt-checkpoints'
+verbose = True
