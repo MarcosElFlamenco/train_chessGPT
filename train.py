@@ -375,6 +375,7 @@ while True:
                 print(f"saving checkpoint to {out_dir}")
                 local_file_path = os.path.join(out_dir, 'ckpt.pt')
                 torch.save(checkpoint, local_file_path)
+                print(f'upload checkpoint {checkpoint_key} to bucket {bucket_name}')
                 upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
     if eval_only and iter_num == 0:
         break

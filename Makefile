@@ -74,13 +74,16 @@ generate_deterministic_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := 100
-BENCHMARK_CSV := evaluation/benchmark_games.csv
-BENCHMARK_PGN := evaluation/benchmark_games.pgn
-BENCHMARK_PRECOMPUTE := evaluation/precompute_moves.pkl
+BENCHMARK_GAMES := random100games
+GENERATE_NUM := 100
+BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
+BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
+BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
 BENCHMARK1 := benchmark1.py
+RESULTS_FILE := evaluation/benchmark_results.csv
 
-CHECKPOINT := evaluation/eval_models/lichess9gb_8layer_A.pth
+CHECKPOINT := evaluation/eval_models/lichess9gb_8layer_23K.pth
+
 precompute_benchmark:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
 		precompute \
@@ -105,6 +108,7 @@ benchmark_model:
 		--input_pgn $(BENCHMARK_PGN) \
 		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
 		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
 
 full_benchmark: generate_precompute_random_benchmark_games benchmark_model

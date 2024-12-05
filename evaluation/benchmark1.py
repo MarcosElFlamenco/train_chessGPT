@@ -249,6 +249,7 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
             segments = content.strip().split('\n\n')
             # Filter out segments that contain only headers
             games = [segment for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
+            print(f" games is of length {len(games)}, and is {games}")
 
             # Wrap games in tqdm for progress bar
             for game_index, game in enumerate(tqdm(games, desc=f"Processing {pgn_file}", unit="game")):
@@ -302,6 +303,8 @@ def run_validation(args):
     # Parse the input PGN into individual games
     total_generated_moves = 0
     illegal_moves_count = 0
+    illegal_move_index = 0
+    game_length_sums = 0
     illegal_moves_examples = []
 
     # Stats per game
@@ -316,6 +319,7 @@ def run_validation(args):
 
         moves = game_info["game_moves"]
         precomputed_moves = game_info["precomputed_moves"]
+        game_length_sums += len(moves)
         if args.troubleshoot_verbose:
             print(f"this is game number {game_index}")
             print(f"moves length is {len(moves)}")
@@ -331,10 +335,12 @@ def run_validation(args):
             is_white_turn = (move_number % 2) == 1
 
             # Prepare the prompt for the model
+            move_prefix = ""
             if is_white_turn:
-                move_prefix = f"{(move_number + 1) // 2}. "
-            else:
-                move_prefix = ""
+                move_prefix = f"{(move_number + 1) // 2}."
+                if args.spaced:
+                    move_prefix += ' '
+
             prompt_pgn = current_pgn + move_prefix
             if args.verbose:
                 print(f"Prompting with the following pgn: {prompt_pgn}")
@@ -363,6 +369,7 @@ def run_validation(args):
             else:
                 illegal_moves_count += 1
                 game_illegal_moves += 1
+                illegal_move_index += move_number
                 illegal_moves_examples.append((move_number, generated_move, "Illegal move generated"))
                 if args.verbose:
                     print(f"Move {move_number}: Generated move '{generated_move}' is ILLEGAL.\n")
@@ -383,40 +390,63 @@ def run_validation(args):
         })
 
     # Reporting
+#ALL GAME STATS
+    all_games_total_generated_moves = 0
+    all_games_illegal_moves_count = 0
+    max_freq = 0.0
+    min_freq = 100.0
+    if args.stats_per_game:
+        print("--- Frequency of Invalid Move Generation Per Game ---")
+    # Per-Game Statistics
+    for stats in game_stats:
+        if args.stats_per_game:
+            print(f"Game {stats['game_index']}:")
+            print(f"  Total Moves: {stats['total_moves']}")
+            print(f"  Illegal Moves: {stats['illegal_moves']}")
+            print(f"  Frequency: {stats['frequency']:.2f}%\n")
+        all_games_total_generated_moves += stats["total_moves"]
+        all_games_illegal_moves_count += stats["illegal_moves"]
+        freq = stats["frequency"]
+        max_freq = max(max_freq, freq)
+        min_freq = min(min_freq, freq)
+
+
     print("\n--- Validation Report ---")
     print(f"Total Generated Moves: {total_generated_moves}")
     print(f"Illegal Moves Generated: {illegal_moves_count}")
     if total_generated_moves > 0:
         frequency = (illegal_moves_count / total_generated_moves) * 100
         print(f"Overall Frequency of Illegal Moves: {frequency:.2f}%\n")
+        
     else:
         print("No moves were generated.\n")
-##ALL GAME STATSj
-    all_games_total_generated_moves = 0
-    all_games_illegal_moves_count = 0
-    max = 0
-    min = 170
+        frequency = 0
+    if illegal_moves_count > 0:
+        avg_index = illegal_move_index/illegal_moves_count
+        print(f"The average index of illegal moves is {avg_index:.2f}")
+    else:
+        print("No illegal moves generated")
+        avg_index = 0
+    num_games = len(precomputed_games)
+    if num_games > 0:
+        avg_game_length = game_length_sums/num_games
+        print(f"Average game length is {avg_game_length:.2f}")
+    else:
+        print("no games")
+        avg_game_length = 0
+    print(f"  Max frequency: {max_freq:.2f}%\n")
+    print(f"  Min frequency: {min_freq:.2f}%\n")
+
+    ##write into csv storer
+    import csv
+    with open(args.results_file, mode='a', newline='', encoding='utf-8') as file:  # Use 'a' to append to the file
+        writer = csv.writer(file)
+        row = [args.checkpoint.split('/')[-1], args.precomputed_moves.split('/')[-1], total_generated_moves,illegal_moves_count, frequency, avg_index, avg_game_length]
+        writer.writerow(row)
+        if args.verbose:
+            print(f'row writen: {row}')
+
  
-    # Per-Game Statistics
-    print("--- Frequency of Invalid Move Generation Per Game ---")
-    for stats in game_stats:
-        print(f"Game {stats['game_index']}:")
-        print(f"  Total Moves: {stats['total_moves']}")
-        print(f"  Illegal Moves: {stats['illegal_moves']}")
-        print(f"  Frequency: {stats['frequency']:.2f}%\n")
-        all_games_total_generated_moves += stats["total_moves"]
-        all_games_illegal_moves_count += stats["illegal_moves"]
-        freq = stats["frequency"]
-        max = max(max, freq)
-        min = min(min, freq)
-    print("Total stats")
-    print(f"  Total Moves: {all_games_total_generated_moves}")
-    print(f"  Illegal Moves: {all_games_illegal_moves_count}")
-    print(f"  Max frequency: {max:.2f}%\n")
-    print(f"  Min frequency: {min:.2f}%\n")
-
-
-   
 
     #if illegal_moves_examples:
         #print("Examples of Illegal Moves:")
@@ -454,12 +484,15 @@ def main():
     eval_parser.add_argument('--input_pgn', type=str, required=True, help='Input PGN file for which to predict and validate next moves')
     eval_parser.add_argument('--precomputed_moves', type=str, required=True, help='File containing precomputed legal moves')
     eval_parser.add_argument('--data_dir', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
+    eval_parser.add_argument('--results_file', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
     eval_parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help='Device to run the model on')
     eval_parser.add_argument('--temperature', type=float, default=1.0, help='Sampling temperature for move generation (default: 1.0)')
     eval_parser.add_argument('--verbose', action='store_true', help='Enable verbose output for debugging')
     eval_parser.add_argument('--troubleshoot_verbose', action='store_true', help='Enable verbose output for debugging')
     eval_parser.add_argument('--graph', action='store_true', help='Enable graph output for debugging')
     eval_parser.add_argument('--illegal_info', action='store_true', help='Enable detailed illegal move information')
+    eval_parser.add_argument('--spaced', action='store_true', help='Enable detailed illegal move information')
+    eval_parser.add_argument('--stats_per_game', action='store_true', help='Enable detailed illegal move information')
 
     args = parser.parse_args()
 
