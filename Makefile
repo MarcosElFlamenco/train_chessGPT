@@ -114,31 +114,15 @@ full_benchmark: generate_precompute_random_benchmark_games benchmark_model
 
 benchmark_set:
 ##2K
-#lichess
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint $(CHECKPOINT) \
-		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
+#lichess ok
 #random ok
 #6k
 #lichess
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint random16M_8layer_6K.pth \
-		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
 #random
 	$(PYTHON) evaluation/$(BENCHMARK1) \
 		eval \
-		--checkpoint random16M_8layer_6K.pth \
-		--precomputed_moves random100games.pkl \
+		--checkpoint evaluation/eval_models/random16M_8layer_12K.pth \
+		--precomputed_moves evaluation/eval_datasets/random100games.pkl \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
@@ -147,7 +131,7 @@ benchmark_set:
 #lichess
 	$(PYTHON) evaluation/$(BENCHMARK1) \
 		eval \
-		--checkpoint lichess9gb_8layer_23K.pth \
+		--checkpoint evaluation/eval_models/random16M_8layer_12K.pth \
 		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
