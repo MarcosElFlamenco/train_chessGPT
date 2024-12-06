@@ -249,7 +249,6 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
             segments = content.strip().split('\n\n')
             # Filter out segments that contain only headers
             games = [segment for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
-            print(f" games is of length {len(games)}, and is {games}")
 
             # Wrap games in tqdm for progress bar
             for game_index, game in enumerate(tqdm(games, desc=f"Processing {pgn_file}", unit="game")):
@@ -481,7 +480,6 @@ def main():
     # Subparser for evaluation mode
     eval_parser = subparsers.add_parser('eval', help='Evaluate model using precomputed legal moves')
     eval_parser.add_argument('--checkpoint', type=str, required=True, help='Path to the model checkpoint (e.g., checkpoint.pth)')
-    eval_parser.add_argument('--input_pgn', type=str, required=True, help='Input PGN file for which to predict and validate next moves')
     eval_parser.add_argument('--precomputed_moves', type=str, required=True, help='File containing precomputed legal moves')
     eval_parser.add_argument('--data_dir', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
     eval_parser.add_argument('--results_file', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')

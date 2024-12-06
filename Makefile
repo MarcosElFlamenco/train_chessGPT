@@ -74,7 +74,7 @@ generate_deterministic_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := random100games
+BENCHMARK_GAMES := lichess100games
 GENERATE_NUM := 100
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
@@ -105,13 +105,57 @@ benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
 		eval \
 		--checkpoint $(CHECKPOINT) \
-		--input_pgn $(BENCHMARK_PGN) \
 		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
 
 full_benchmark: generate_precompute_random_benchmark_games benchmark_model
+
+benchmark_set:
+##2K
+#lichess
+	$(PYTHON) evaluation/$(BENCHMARK1) \
+		eval \
+		--checkpoint $(CHECKPOINT) \
+		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+
+#random ok
+#6k
+#lichess
+	$(PYTHON) evaluation/$(BENCHMARK1) \
+		eval \
+		--checkpoint random16M_8layer_6K.pth \
+		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+
+#random
+	$(PYTHON) evaluation/$(BENCHMARK1) \
+		eval \
+		--checkpoint random16M_8layer_6K.pth \
+		--precomputed_moves random100games.pkl \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+
+#23K
+#lichess
+	$(PYTHON) evaluation/$(BENCHMARK1) \
+		eval \
+		--checkpoint lichess9gb_8layer_23K.pth \
+		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+	
+#random ok
+
+
 
 remote_benchmark_model:
 	sky jobs launch -c benchmarkCluster remote/benchmark.yaml
