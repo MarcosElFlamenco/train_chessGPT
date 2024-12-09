@@ -82,7 +82,7 @@ generate_deterministic_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := lichess100games
+BENCHMARK_GAMES := lichess2013_100games_160moves
 GENERATE_NUM := 100
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
@@ -90,7 +90,7 @@ BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
 BENCHMARK1 := benchmark1.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
-CHECKPOINT := evaluation/eval_models/random16M_8layer_2K.pth
+CHECKPOINT := evaluation/eval_models/random16M_8layer_6K.pth
 
 precompute_benchmark:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
@@ -100,7 +100,7 @@ precompute_benchmark:
 
 generate_benchmark_games:
 	$(PYTHON) data/lichess_hf_dataset/random/gen_random.py \
-		--num_games $(BENCHMARK_GAMES) \
+		--num_games $(GENERATE_NUM) \
 		--output_file $(BENCHMARK_CSV)
 	$(PYTHON) data/lichess_hf_dataset/random/toPGN.py \
 		--csv_file $(BENCHMARK_CSV) \
@@ -146,6 +146,7 @@ benchmark_set:
 		--temperature $(TEMPERATURE) \
 	
 #random ok
+
 
 
 

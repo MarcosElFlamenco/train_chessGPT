@@ -1,17 +1,17 @@
 PYTHON := python3
 HF_REPO := MarcosElFlamenco/chess_games
 
-BASE := lichess_9gb
+BASE := lichess_train
 CSV_FILE := $(BASE).csv
 BLOCKS_FILE := $(BASE)_blocks.csv
 
-PGN_DIR := downloaded_pgn
+PGN_DIR := pgns 
 S3_BUCKET := go-bucket-craft
 S3_DIR := dataset
 
 MIN_ELO := 0
-MAX_ELO := 1500
-MIN_LEN := 300
+MAX_ELO := 30000
+MIN_LEN := 1024
 INPUT_LENGTH := 1023
 TEST_SIZE := 0.01
 

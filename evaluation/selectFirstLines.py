@@ -38,8 +38,8 @@ def filter_pgn(input_file, output_file, n, m):
 
 # Usage example
 input_pgn = "evaluation/eval_datasets/lichess_db_standard_rated.pgn"
-output_pgn = "evaluation/eval_datasets/lichess100games.pgn" # Replace with your desired output PGN file path
-n_games = 100            # Number of games to write
-min_moves = 85            # Minimum number of moves
+output_pgn = "evaluation/lichess_train.pgn" # Replace with your desired output PGN file path
+n_games = 10000            # Number of games to write
+min_moves = 37            # Minimum number of moves
 
 filter_pgn(input_pgn, output_pgn, n_games, min_moves)
