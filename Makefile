@@ -17,6 +17,14 @@ query_spot_prices:
 	--instance-types g5.4xlarge g5.xlarge g5.2xlarge g5.8xlarge g5.16xlarge \
 	--output table
 
+check_spot_history:
+	aws ec2 describe-spot-price-history \
+	--start-time 2024-12-06T09:39:53Z \
+	--instance-types g5.4xlarge g5.xlarge g5.2xlarge g5.8xlarge g5.16xlarge \
+	--availability-zone eu-west-3
+
+
+
 setup_checkpoint:
 	python3 setupCheckpoint.py \
 		config/random15M.py
@@ -162,3 +170,5 @@ test:
 	python test.py	
 sand:
 	python sandbox.py
+
+
