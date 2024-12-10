@@ -248,7 +248,9 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
             # Split the content into segments separated by two newlines
             segments = content.strip().split('\n\n')
             # Filter out segments that contain only headers
-            games = [segment for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
+            games = [segment[:1024] for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
+            for game in games:
+                print(len(game))
 
             # Wrap games in tqdm for progress bar
             for game_index, game in enumerate(tqdm(games, desc=f"Processing {pgn_file}", unit="game")):
@@ -311,10 +313,6 @@ def run_validation(args):
 
     # Wrap games in tqdm for progress bar
     for game_index, game_info in enumerate(tqdm(precomputed_games, desc="Evaluating games", unit="game")):
-        if game_index == 0:
-            print("Skipping first game for better debugging (line 309)")
-            continue
-
 
         moves = game_info["game_moves"]
         precomputed_moves = game_info["precomputed_moves"]

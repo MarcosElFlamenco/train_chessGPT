@@ -11,9 +11,9 @@ S3_DIR := dataset
 
 MIN_ELO := 0
 MAX_ELO := 30000
-MIN_LEN := 1024
+MIN_LEN := 102
 INPUT_LENGTH := 1023
-TEST_SIZE := 0.01
+TEST_SIZE := 0.
 
 BASE := 9gb
 
@@ -114,14 +114,15 @@ hfdataset: download csv blocks block_zip uploads3 tokens bin_zip uploads3
 	echo 'pipeline finished'
 
 ##RANDOM GENERATION
-BIN_CATEGORY := 16MnoS
+BIN_CATEGORY := forProbes
 RANDOM := random$(BIN_CATEGORY)
 RANDOM_CSV := $(RANDOM).csv
 RANDOM_PGN := $(RANDOM).pgn
 RANDOM_BLOCKS := $(RANDOM)_blocks.csv
-NUM_RANDOM_GAMES := 10
-RANDOM_GEN_LOG_FREQ := 10000
+NUM_RANDOM_GAMES := 30000
+RANDOM_GEN_LOG_FREQ := 1000
 RANDOM_GEN_SAVE_FREQ := 50000
+RANDOM_INPUT_LENGTH := 1023
 ZIP_DIR := zipped
 BIN_DIR := binned
 
@@ -134,7 +135,7 @@ random_csv:
 random_blocks:
 	python3 filter/csv_to_blocks.py \
 		--input_file $(RANDOM_CSV) \
-		--input_length $(INPUT_LENGTH) \
+		--input_length $(RANDOM_INPUT_LENGTH) \
 		--csv_type quotes
 
 random_tokens:
