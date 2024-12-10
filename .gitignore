@@ -27,3 +27,5 @@ data/lichess_hf_dataset/val1M.bin
 
 evaluation/eval_models/*
 evaluation/eval_datasets/*
+
+!benchmark_results.csv
