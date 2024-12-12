@@ -90,7 +90,7 @@ BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
 BENCHMARK1 := benchmark1.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
-CHECKPOINT := evaluation/eval_models/random16M_8layer_6K.pth
+CHECKPOINT := evaluation/eval_models/random16M_8layer_32K.pth
 
 precompute_benchmark:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
@@ -119,7 +119,28 @@ benchmark_model:
 		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
 
+double_benchmark_model:
+	$(PYTHON) evaluation/$(BENCHMARK1) \
+		eval \
+		--checkpoint $(CHECKPOINT) \
+		--precomputed_moves evaluation/eval_datasets/lichess13_100g_180m.pkl \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+
+	$(PYTHON) evaluation/$(BENCHMARK1) \
+		eval \
+		--checkpoint $(CHECKPOINT) \
+		--precomputed_moves evaluation/eval_datasets/random100games.pkl \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+
+
+
 full_benchmark: generate_precompute_random_benchmark_games benchmark_model
+
+
 
 
 benchmark_set:

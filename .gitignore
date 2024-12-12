@@ -23,7 +23,7 @@ data/lichess_hf_dataset/train9gb.bin
 data/lichess_hf_dataset/val9gb.bin
 data/lichess_hf_dataset/train1M.bin
 data/lichess_hf_dataset/val1M.bin
-
+data/lichess_hf_dataset/pgns/
 
 evaluation/eval_models/*
 evaluation/eval_datasets/*

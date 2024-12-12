@@ -248,7 +248,7 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
             # Split the content into segments separated by two newlines
             segments = content.strip().split('\n\n')
             # Filter out segments that contain only headers
-            games = [segment[:1024] for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
+            games = [segment[:1023] for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
             for game in games:
                 print(len(game))
 

@@ -1,7 +1,7 @@
 PYTHON := python3
 HF_REPO := MarcosElFlamenco/chess_games
 
-BASE := lichess_train
+BASE := output
 CSV_FILE := $(BASE).csv
 BLOCKS_FILE := $(BASE)_blocks.csv
 
@@ -11,32 +11,11 @@ S3_DIR := dataset
 
 MIN_ELO := 0
 MAX_ELO := 30000
-MIN_LEN := 102
+MIN_LEN := 365
 INPUT_LENGTH := 1023
-TEST_SIZE := 0.
+TEST_SIZE := 0.1
 
 BASE := 9gb
-
-
-OCT14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-10.pgn.zst
-NOV14 := https://database.lichess.org/standard/lichess_db_standard_rated_2014-11.pgn.zst
-
-FEB13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-02.pgn.zst 
-MAR13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-03.pgn.zst
-APR13 := https://database.lichess.org/standard/lichess_db_standard_rated_2013-04.pgn.zst
-
-
-SEP24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-09.pgn.zst
-AUG24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-08.pgn.zst
-JUL24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-07.pgn.zst
-JUN24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-06.pgn.zst
-MAY24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-05.pgn.zst
-APR24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-04.pgn.zst
-MAR24 := https://database.lichess.org/standard/lichess_db_standard_rated_2024-03.pgn.zst
-
-MAR20 := https://database.lichess.org/standard/lichess_db_standard_rated_2020-03.pgn.zst
-
-HF_TOKEN := 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
 
 testing:
 	python3 test.py
@@ -67,7 +46,7 @@ blocks:
 	python3 filter/csv_to_blocks.py \
 		--input_file $(CSV_FILE) \
 		--input_length $(INPUT_LENGTH) \
-		--csv_type noquotes
+		--csv_type quotes
 tokens:
 	python3 tokenizeData.py \
 		--blocks_file $(BLOCKS_FILE) \
