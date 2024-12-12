@@ -92,6 +92,9 @@ RESULTS_FILE := evaluation/benchmark_results.csv
 
 CHECKPOINT := evaluation/eval_models/random16M_8layer_32K.pth
 
+plot:
+	$(PYTHON) evaluation/graphing_results.py
+
 precompute_benchmark:
 	$(PYTHON) evaluation/$(BENCHMARK1) \
 		precompute \

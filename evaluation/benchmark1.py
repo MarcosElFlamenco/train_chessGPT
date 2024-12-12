@@ -438,7 +438,7 @@ def run_validation(args):
     import csv
     with open(args.results_file, mode='a', newline='', encoding='utf-8') as file:  # Use 'a' to append to the file
         writer = csv.writer(file)
-        row = [args.checkpoint.split('/')[-1], args.precomputed_moves.split('/')[-1], total_generated_moves,illegal_moves_count, frequency, avg_index, avg_game_length]
+        row = [(args.checkpoint.split('/')[-1]).split('.')[0], (args.precomputed_moves.split('/')[-1]).split('.')[0], total_generated_moves,illegal_moves_count, frequency, avg_index, avg_game_length]
         writer.writerow(row)
         if args.verbose:
             print(f'row writen: {row}')
