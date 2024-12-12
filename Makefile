@@ -3,7 +3,8 @@ TRAIN := train.py
 PREPARE := data/lichess_hf_dataset/prepare.py
 DATA_DIR := data/lichess_hf_dataset
 CONFIG := local.py
-REMOTE_YAML := random.yaml
+LICHESS_YAML := lichess.yaml
+RANDOM_YAML := random.yaml
 
 local_train: $(TRAIN) 
 	$(PYTHON) $(TRAIN) \
@@ -35,8 +36,12 @@ prepare: $(PREPARE)
 remote_train: 
 	sky jobs launch -c boardCluster --env WANDB_API_KEY remote/lichess.yaml
 
-remote_nocontroller_train:
-	sky launch -c boardNoSpotCluster --use-spot --env WANDB_API_KEY remote/$(REMOTE_YAML)
+remote_nocontroller_train_lichess:
+	sky launch -c boardLichessCluster --use-spot --env WANDB_API_KEY remote/$(LICHESS_YAML)
+
+remote_nocontroller_train_random:
+	sky launch -c boardRandomCluster --use-spot --env WANDB_API_KEY remote/$(RANDOM_YAML)
+
 
 toy_remote: $(MAIN)
 	sky jobs launch -c boardCluster --env WANDB_API_KEY remote/toy.yaml
@@ -87,10 +92,10 @@ GENERATE_NUM := 100
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
 BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
-BENCHMARK1 := benchmark1.py
+BENCHMARK1 := benchmark2.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
-CHECKPOINT := evaluation/eval_models/random16M_8layer_32K.pth
+CHECKPOINT := evaluation/eval_models/lichess9gb_8layer_25K.pth
 
 plot:
 	$(PYTHON) evaluation/graphing_results.py

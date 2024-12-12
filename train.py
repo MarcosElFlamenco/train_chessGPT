@@ -407,9 +407,6 @@ while True:
         total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         if verbose:
             new_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 200)
-            print(f"iter number {iter_num}")
-            print(f'The total norm is {total_norm}')
-            print(f"after cliping the total grad norm is {new_norm}")
         grad_norms.append(total_norm)
     # step the optimizer and scaler if training in fp16
     scaler.step(optimizer)

@@ -290,6 +290,7 @@ def run_validation(args):
     Args:
         args: Parsed command-line arguments.
     """
+    storage_file = 'evaluation/test_results.json'
     # Load meta information
     vocab_size, stoi, itos = load_meta(args.data_dir)
     print(f"Vocab Size: {vocab_size}")
@@ -313,7 +314,7 @@ def run_validation(args):
 
     # Stats per game
     game_stats = []
-
+    game_dics = []
     # Wrap games in tqdm for progress bar
     for game_index, game_info in enumerate(tqdm(precomputed_games, desc="Evaluating games", unit="game")):
 
@@ -329,6 +330,7 @@ def run_validation(args):
 
         game_total_moves = 0
         game_illegal_moves = 0
+        illegal_move_indices = []
 
         for idx, move in enumerate(tqdm(moves, desc=f'Handling game {game_index}', unit = 'move') ):
             move_number = idx + 1
@@ -367,6 +369,7 @@ def run_validation(args):
                 if args.verbose:
                     print(f"Move {move_number}: Generated move '{generated_move}' is LEGAL.\n")
             else:
+                illegal_move_indices.append(move_number)
                 illegal_moves_count += 1
                 game_illegal_moves += 1
                 illegal_move_index += move_number
@@ -379,15 +382,17 @@ def run_validation(args):
                     print(f'The valid moves were: {precomputed_moves[idx]}')
 
             current_pgn = prompt_pgn + move + ' '
-
-        # Record stats for the current game
-        game_frequency = (game_illegal_moves / game_total_moves) * 100 if game_total_moves > 0 else 0
-        game_stats.append({
-            'game_index': game_index + 1,
-            'total_moves': game_total_moves,
-            'illegal_moves': game_illegal_moves,
-            'frequency': game_frequency
-        })
+        game_error_frequency = 1.0
+        if game_total_moves != 0:
+            game_error_frequency = game_illegal_moves/game_total_moves
+        game_dic = {
+               "error_indices" : illegal_move_indices,
+               "num_moves" : game_total_moves,
+               "num_errors" : game_illegal_moves,
+               "error_frequency" : game_error_frequency
+                }
+        game_dics.append(game_dic)
+        
 
     # Reporting
 #ALL GAME STATS
@@ -437,24 +442,29 @@ def run_validation(args):
     print(f"  Max frequency: {max_freq:.2f}%\n")
     print(f"  Min frequency: {min_freq:.2f}%\n")
 
-    ##write into csv storer
-    import csv
-    with open(args.results_file, mode='a', newline='', encoding='utf-8') as file:  # Use 'a' to append to the file
-        writer = csv.writer(file)
-        row = [(args.checkpoint.split('/')[-1]).split('.')[0], (args.precomputed_moves.split('/')[-1]).split('.')[0], total_generated_moves,illegal_moves_count, frequency, avg_index, avg_game_length]
-        writer.writerow(row)
-        if args.verbose:
-            print(f'row writen: {row}')
-
+    ##update file
+    import json
+    with open(storage_file, "r") as f:
+        test_results = json.load(f)
+    add_result(test_results, args.checkpoint, args.precomputed_moves, game_dics)
+    with open(storage_file, "w") as f:
+        json.dump(test_results,f)
  
 
-    #if illegal_moves_examples:
-        #print("Examples of Illegal Moves:")
-        #for example in illegal_moves_examples[:5]:  # Show up to 5 examples
-            #move_num, move, reason = example
-            #print(f"Move {move_num}: {player} -> '{move}' | Reason: {reason}")
-    #else:
-        #print("All generated moves were legal!")
+def add_result(test_results, model_name, dataset_name, game_dics):
+    model2 = model_name.split('.')[0]
+    model_split = model2.split('_')
+    model_iters = model_split[-1]
+    model_name = model2[:-(len(model_iters) + 1)]
+    dataset = dataset_name.split('.')[0]
+
+    if model_name not in test_results:
+        test_results[model_name] = {}
+    if model_iters not in test_results[model_name]:
+        test_results[model_name][model_iters] = {}
+    test_results[model_name][model_iters][dataset] = game_dics
+
+
 
 def precompute_legal_moves_wrapper(args):
     """

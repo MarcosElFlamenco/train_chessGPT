@@ -9,7 +9,7 @@ always_save_checkpoint = False
 
 wandb_log = True 
 mlflow_log = False 
-wandb_project = "chess-gpt-lichesstrain"
+wandb_project = "chess-gpt-lichess-train"
 wandb_run_name = "8layer_lichess"
 
 dataset = "lichess_hf_dataset"
@@ -25,7 +25,7 @@ n_embd = 512
 dropout = 0.0
 
 learning_rate = 3e-4
-max_iters =  25000
+max_iters =  100000
 lr_decay_iters = max_iters  # make equal to max_iters usually
 min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
@@ -34,6 +34,6 @@ warmup_iters = 2000  # not super necessary potentially
 compile = False
 
 data_type = '9gb'
-checkpoint_key = 'lichess_8layer_16M.pth'
+checkpoint_key = 'lichess9gb_8layer.pth'
 bucket_name = 'chess-gpt-checkpoints'
 verbose = False
