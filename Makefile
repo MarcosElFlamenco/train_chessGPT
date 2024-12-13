@@ -25,11 +25,6 @@ check_spot_history:
 	--availability-zone eu-west-3
 
 
-
-setup_checkpoint:
-	python3 setupCheckpoint.py \
-		config/random15M.py
-
 prepare: $(PREPARE)
 	$(PYTHON) $(PREPARE)
 
@@ -87,16 +82,20 @@ generate_deterministic_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := lichess13_100g_180m
+BENCHMARK_GAMES := toyBench
 GENERATE_NUM := 100
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
 BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
-BENCHMARK1 := benchmark2.py
+BENCHMARK1 := benchmark1.py
+BENCHMARK2 := benchmark2.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
-CHECKPOINT := evaluation/eval_models/lichess9gb_8layer_25K.pth
+M1 := evaluation/eval_models/lichess9gb_8layer_22K.pth
+M2 := evaluation/eval_models/lichess9gb_8layer_22K.pth
 
+D1 := evaluation/eval_datasets/random100games.pkl
+D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 plot:
 	$(PYTHON) evaluation/graphing_results.py
 
@@ -119,10 +118,10 @@ generate_benchmark_games:
 generate_precompute_random_benchmark_games: generate_benchmark_games precompute_benchmark
 
 benchmark_model:
-	$(PYTHON) evaluation/$(BENCHMARK1) \
+	$(PYTHON) evaluation/$(BENCHMARK2) \
 		eval \
-		--checkpoint $(CHECKPOINT) \
-		--precomputed_moves $(BENCHMARK_PRECOMPUTE) \
+		--checkpoints $(M1) $(M2) \
+		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
@@ -149,7 +148,8 @@ double_benchmark_model:
 full_benchmark: generate_precompute_random_benchmark_games benchmark_model
 
 
-
+show_dic:
+	python evaluation/show_dictionary.py
 
 benchmark_set:
 ##2K

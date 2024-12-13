@@ -31,7 +31,7 @@ from torch.distributed import init_process_group, destroy_process_group
 from download_dataset import download_bins_from_s3
 
 from model import GPTConfig, GPT
-from remote.save_checkpoints import upload_checkpoint, load_checkpoint, download_bins_from_s3_with_progress
+from remote.connecting_checkpoints import upload_checkpoint, load_checkpoint, download_bins_from_s3_with_progress
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -76,7 +76,7 @@ min_lr = 6e-5 # minimum learning rate, should be ~= learning_rate/10 per Chinchi
 backend = 'nccl' # 'nccl', 'gloo', etc.
 
 data_type = '1M'
-checkpoint_key = 'lichess_8layers_progames.pth'
+checkpoint_key_prefix = 'lichess_8layer'
 bucket_name = 'chess-checkpoint-craft'
 
 verbose = False
@@ -199,10 +199,10 @@ model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=bloc
 
 
 if init_from == 'resume':
-    print(f"Resuming training from checkpoint {checkpoint_key} in bucket {bucket_name}")
+
     # resume training from a checkpoint.
     ckpt_path = os.path.join(out_dir, 'ckpt.pt')
-    checkpoint = load_checkpoint(bucket_name, checkpoint_key, device)
+    checkpoint = load_checkpoint(bucket_name, checkpoint_key_prefix, device)
     if checkpoint == None:
         print('There was no checkpoint')
         init_from = 'scratch'
@@ -375,6 +375,7 @@ while True:
                 print(f"saving checkpoint to {out_dir}")
                 local_file_path = os.path.join(out_dir, 'ckpt.pt')
                 torch.save(checkpoint, local_file_path)
+                checkpoint_key = checkpoint_key_prefix + f"_{iter_num//1000}" + "K.pth"
                 print(f'upload checkpoint {checkpoint_key} to bucket {bucket_name}')
                 upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
     if eval_only and iter_num == 0:

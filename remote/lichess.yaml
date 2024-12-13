@@ -35,4 +35,5 @@ setup: |
 
 run: |
   set -e
+
   python3 train.py config/lichess9gb.py

@@ -1,3 +1,3 @@
-import evaluation.benchmark1 as a
+import remote.connecting_checkpoints as a
 
-a.precompute_legal_moves(["evaluation/lichess2013_2500lines.pgn"], "pre.pkl")
+b = a.load_checkpoint("chess-gpt-checkpoints", "lichess9gb_8layer", "cpu")

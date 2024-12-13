@@ -283,7 +283,7 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
         pickle.dump(precomputed_games, f)
     print(f"Precomputed legal moves and games saved to {output_file}")
 
-def run_validation(args):
+def run_validation_single_model(args):
     """
     Runs the move generation and validation process.
 
@@ -297,13 +297,13 @@ def run_validation(args):
 
     # Load the model
     model = load_model(args.checkpoint, args.device)
-    print("Model loaded successfully.\n")
+    print(f"Model loaded successfully from {args.checkpoint}.\n")
 
     # Load precomputed legal moves
-    with open(args.precomputed_moves, 'rb') as f:
+    with open(args.dataset, 'rb') as f:
         precomputed_games = pickle.load(f)
 
-    print(f"Precomputed legal moves loaded from {args.precomputed_moves}")
+    print(f"Precomputed legal moves loaded from {args.dataset}")
 
     # Parse the input PGN into individual games
     total_generated_moves = 0
@@ -417,6 +417,7 @@ def run_validation(args):
 
 
     print("\n--- Validation Report ---")
+    print(f"Model: {args.checkpoint.split('/')[-1].split('.')[0]} Dataset: {args.dataset.split('/')[-1].split('.')[0]}")
     print(f"Total Generated Moves: {total_generated_moves}")
     print(f"Illegal Moves Generated: {illegal_moves_count}")
     if total_generated_moves > 0:
@@ -446,17 +447,18 @@ def run_validation(args):
     import json
     with open(storage_file, "r") as f:
         test_results = json.load(f)
-    add_result(test_results, args.checkpoint, args.precomputed_moves, game_dics)
+    add_result(test_results, args.checkpoint, args.dataset, game_dics)
+
     with open(storage_file, "w") as f:
         json.dump(test_results,f)
  
 
 def add_result(test_results, model_name, dataset_name, game_dics):
-    model2 = model_name.split('.')[0]
+    model2 = model_name.split('/')[-1].split('.')[0]
     model_split = model2.split('_')
     model_iters = model_split[-1]
     model_name = model2[:-(len(model_iters) + 1)]
-    dataset = dataset_name.split('.')[0]
+    dataset = dataset_name.split('/')[-1].split('.')[0]
 
     if model_name not in test_results:
         test_results[model_name] = {}
@@ -490,8 +492,8 @@ def main():
 
     # Subparser for evaluation mode
     eval_parser = subparsers.add_parser('eval', help='Evaluate model using precomputed legal moves')
-    eval_parser.add_argument('--checkpoint', type=str, required=True, help='Path to the model checkpoint (e.g., checkpoint.pth)')
-    eval_parser.add_argument('--precomputed_moves', type=str, required=True, help='File containing precomputed legal moves')
+    eval_parser.add_argument('--checkpoints', type=str, required=True, nargs= '+', help='Path to the model checkpoint (e.g., checkpoint.pth)')
+    eval_parser.add_argument('--datasets', type=str, required=True, nargs = '+',help='File containing precomputed legal moves')
     eval_parser.add_argument('--data_dir', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
     eval_parser.add_argument('--results_file', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
     eval_parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help='Device to run the model on')
@@ -505,10 +507,15 @@ def main():
 
     args = parser.parse_args()
 
+
     if args.mode == 'precompute':
         precompute_legal_moves_wrapper(args)
     elif args.mode == 'eval':
-        run_validation(args)
+        for checkpoint in args.checkpoints:
+            for dataset in args.datasets:
+                args.checkpoint = checkpoint
+                args.dataset = dataset
+                run_validation_single_model(args)
     else:
         parser.print_help()
 

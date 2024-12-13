@@ -5,7 +5,7 @@ eval_iters = 100
 # when running on multiple GPUs. TODO: investigate
 log_interval = 100  # don't print too too often
 
-always_save_checkpoint = False
+always_save_checkpoint = True
 
 wandb_log = True 
 mlflow_log = False 
@@ -31,9 +31,9 @@ min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 
 warmup_iters = 2000  # not super necessary potentially
-compile = False
+compile = True
 
-data_type = '16MnoS'
-checkpoint_key = 'random16M_8layer_A.pth'
+data_type = '16M'
+checkpoint_key_prefix = f"random{data_type}_8layer"
 bucket_name = 'chess-gpt-checkpoints'
 verbose = True

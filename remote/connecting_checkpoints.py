@@ -2,6 +2,7 @@ import boto3
 import torch
 from tqdm import tqdm
 
+
 def empty_s3_bucket(bucket_name):
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(bucket_name)
@@ -36,10 +37,35 @@ def save_checkpoint(epoch, model, optimizer, bucket_name, checkpoint_key):
     torch.save(checkpoint, 'checkpoint.pth')
     upload_checkpoint('checkpoint.pth', bucket_name, checkpoint_key)
 
-def load_checkpoint(bucket_name, checkpoint_key, device):
+def List_s3_objects(bucket_name, prefix=None):
+
+    s3_client = boto3.client('s3')
+    objects = []
+    paginator = s3_client.get_paginator('list_objects_v2')
+    operation_parameters = {'Bucket': bucket_name}
+    if prefix:
+        operation_parameters['Prefix'] = prefix
+
+    for page in paginator.paginate(**operation_parameters):
+        if 'Contents' in page:
+            for obj in page['Contents']:
+                objects.append(obj['Key'])
+    
+    return objects
+
+def load_checkpoint(bucket_name, checkpoint_key_prefix, device):
     local_file_path = 'checkpoint.pth'
-    if checkpoint_exists(bucket_name, checkpoint_key):
+    contents = List_s3_objects(bucket_name, prefix=checkpoint_key_prefix)
+
+    if contents:
+        print(contents)
+        full_prefix = checkpoint_key_prefix + "_"
+        versions = [s.removeprefix(full_prefix).removesuffix("K.pth") for s in contents] 
+        print(versions)
+        most_recent_version = max(versions)
+        checkpoint_key = checkpoint_key_prefix + "_" + most_recent_version + "K.pth"
         print('A checkpoint does in fact exist, now loading...')
+        print(f"Resuming training from checkpoint {checkpoint_key} in bucket {bucket_name}")
         download_checkpoint(bucket_name, checkpoint_key, local_file_path)
         checkpoint = torch.load(local_file_path, map_location=device)
         return checkpoint
