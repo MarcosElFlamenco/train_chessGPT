@@ -35,8 +35,4 @@ setup: |
 
 run: |
   set -e
-  mv data/lichess_hf_dataset/train16MnoS.bin data/lichess_hf_dataset/train16M.bin
-  mv data/lichess_hf_dataset/val16MnoS.bin data/lichess_hf_dataset/val16M.bin
-
-
   python3 train.py config/random16M.py

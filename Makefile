@@ -91,8 +91,12 @@ BENCHMARK1 := benchmark1.py
 BENCHMARK2 := benchmark2.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
-M1 := evaluation/eval_models/lichess9gb_8layer_22K.pth
-M2 := evaluation/eval_models/lichess9gb_8layer_22K.pth
+M1 := evaluation/eval_models/lichess9gb_8layer_2K.pth
+M2 := evaluation/eval_models/lichess9gb_8layer_21K.pth
+M3 := evaluation/eval_models/random16M_8layer_6K.pth
+M4 := evaluation/eval_models/random16M_8layer_12K.pth
+M5 := evaluation/eval_models/random16M_8layer_22K.pth
+
 
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
@@ -120,7 +124,7 @@ generate_precompute_random_benchmark_games: generate_benchmark_games precompute_
 benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK2) \
 		eval \
-		--checkpoints $(M1) $(M2) \
+		--checkpoints $(M1) $(M2) $(M3) $(M4) $(M5) \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
