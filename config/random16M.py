@@ -36,4 +36,4 @@ compile = True
 data_type = '16M'
 checkpoint_key_prefix = f"random{data_type}_8layer"
 bucket_name = 'chess-gpt-checkpoints'
-verbose = True
+verbose = False

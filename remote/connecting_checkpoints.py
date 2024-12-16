@@ -60,10 +60,10 @@ def load_checkpoint(bucket_name, checkpoint_key_prefix, device):
     if contents:
         print(contents)
         full_prefix = checkpoint_key_prefix + "_"
-        versions = [s.removeprefix(full_prefix).removesuffix("K.pth") for s in contents] 
+        versions = [int(s.removeprefix(full_prefix).removesuffix("K.pth")) for s in contents] 
         print(versions)
         most_recent_version = max(versions)
-        checkpoint_key = checkpoint_key_prefix + "_" + most_recent_version + "K.pth"
+        checkpoint_key = checkpoint_key_prefix + "_" + str(most_recent_version) + "K.pth"
         print('A checkpoint does in fact exist, now loading...')
         print(f"Resuming training from checkpoint {checkpoint_key} in bucket {bucket_name}")
         download_checkpoint(bucket_name, checkpoint_key, local_file_path)

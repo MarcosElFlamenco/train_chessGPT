@@ -2,6 +2,7 @@ import pandas as pd
 import re
 import matplotlib.pyplot as plt
 import bisect
+import matplotlib.cm as cm
 
 def visualize_error_frequency(csv_file, datasets_to_include, model_prefixes):
     # Read the CSV file
@@ -44,91 +45,82 @@ datasets_to_include = ['random100games', 'lichess13_100g_180m']  # Replace with 
 model_prefixes = ['lichess9gb', 'random16M']  # Replace with your model prefixes
 
 
-def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves):
+
+def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list):
     """
-    data: 
-        A nested dictionary with the structure:
-        {
-            "model_name": {
-                <iteration_number>: {
-                    "dataset_name": {
-                        ... possibly other info ...,
-                        "errors": [list_of_mistake_indices]
-                    },
-                    ...
-                },
-                ...
-            },
-            ...
-        }
-
-    model_types:
-        A list of model names (keys in 'data') to plot.
-    
-    benchmark_datasets:
-        A list of dataset names to evaluate.
-    
-    max_moves:
-        An integer threshold. Only mistakes with index < max_moves are counted.
-
-    This function produces a Matplotlib line plot of iterations vs. error frequency 
-    for each (model, dataset) combination.
+    Enhanced version of the error frequency plot:
+    - Same model-dataset combinations share a base color.
+    - Intensity of the color varies with 'max_moves' using a colormap gradient.
     """
+    plt.figure(figsize=(12, 7))
+    base_cmap = cm.get_cmap('viridis')  # Colormap for gradients
 
-    plt.figure(figsize=(10, 6))
+    # Assign unique colors for each (model, dataset) combination
+    color_mapping = {}
+    color_idx = 0
+    unique_pairs = [(model, dataset) for model in model_types for dataset in benchmark_datasets]
 
-    for model in model_types:
-        # Check if model exists in data
+    for model, dataset in unique_pairs:
         if model not in data:
             print(f"Warning: Model '{model}' not found in data.")
             continue
 
-        for dataset in benchmark_datasets:
+        # Assign a base color for each model-dataset pair
+        base_color = base_cmap(color_idx / len(unique_pairs))
+        color_mapping[(model, dataset)] = base_color
+        color_idx += 1
+
+        for idx, max_moves in enumerate(sorted(max_moves_list)):
             iteration_vals = []
             error_freqs = []
 
-            # Iterate over each checkpoint (iteration)
-            # Example: data[model] = {10000: {...}, 20000: {...}, ...}
+            # Iterate over checkpoints (iterations)
             for iteration, iteration_dict in data[model].items():
-                # Check if dataset is present at this iteration
                 if dataset not in iteration_dict:
                     continue
 
-                # We assume there's a list of errors under the key "errors"
-                # or a direct list if your structure is simpler.
                 errors_info = iteration_dict[dataset]
-
-                # If the nested structure is: iteration_dict[dataset] = [list_of_errors],
-                # then `errors_list = iteration_dict[dataset]`.
-                # But if it's iteration_dict[dataset] = {"errors": [list_of_errors]},
-                # then:
                 errors_lists = [a["error_indices"] for a in errors_info]
                 moves_lists = [a['num_moves'] for a in errors_info]
-                total_moves = 0
+                total_moves_tested_for = 0
                 num_mistakes = 0
 
-                # Filter mistakes that occur before 'max_moves'
+                # Count errors under 'max_moves'
                 for i in range(len(moves_lists)):
-                    total_moves += moves_lists[i]
-                    errors_list = errors_lists[i]
-                    idx = bisect.bisect_right(errors_list, max_moves)
-                    num_mistakes += idx
+                    total_moves_in_game = moves_lists[i]
+                    total_moves_tested_for_in_game = min(max_moves, total_moves_in_game)
+                    total_moves_tested_for += total_moves_tested_for_in_game
 
-                error_freq = num_mistakes/total_moves
+                    errors_list = errors_lists[i]
+                    num_mistakes_game = bisect.bisect_right(errors_list, max_moves)
+                    num_mistakes += num_mistakes_game
+
+                error_freq = num_mistakes / total_moves_tested_for
                 iteration_vals.append(int(iteration[0:-1]))
                 error_freqs.append(error_freq)
 
-            # Sort (iteration, frequency) pairs by iteration before plotting
+            # Plot with gradient intensity for 'max_moves'
             if iteration_vals:
                 iteration_vals, error_freqs = zip(*sorted(zip(iteration_vals, error_freqs)))
+                gradient_alpha = 0.5 + 0.5 * (idx / len(max_moves_list))  # Vary transparency with max_moves
                 plt.plot(iteration_vals, error_freqs, marker='o',
-                         label=f"{model} - {dataset}")
+                         label=f"{model} - {dataset} - {max_moves}",
+                         color=base_color, alpha=gradient_alpha, linewidth=2)
 
-    plt.title(f"Error Frequency vs. Iterations (under {max_moves} moves)")
+    # Graph customization
+    plt.title("Error Frequency vs. Iterations (Gradient Intensity for Max Moves)")
     plt.xlabel("Iterations (K)")
-    plt.ylabel("Error Frequency (mistakes / max_moves)")
-    plt.legend()
+    plt.ylabel("Error Frequency (mistakes / total moves)")
     plt.grid(True)
+
+    # Simplify the legend to show only model-dataset pairs
+    handles, labels = plt.gca().get_legend_handles_labels()
+    unique_labels = {}
+    for h, l in zip(handles, labels):
+        key = " - ".join(l.split(" - ")[:-1])  # Combine model and dataset as key
+        if key not in unique_labels:
+            unique_labels[key] = h
+
+    plt.legend(unique_labels.values(), unique_labels.keys(), title="Model - Dataset", loc='upper right')
     plt.tight_layout()
     plt.show()
-
