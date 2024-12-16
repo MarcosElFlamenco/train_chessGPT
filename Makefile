@@ -28,8 +28,8 @@ check_spot_history:
 prepare: $(PREPARE)
 	$(PYTHON) $(PREPARE)
 
-remote_train: 
-	sky jobs launch -c boardCluster --env WANDB_API_KEY remote/lichess.yaml
+remote_controller_train_random: 
+	sky jobs launch -c randomGamesCluster --env WANDB_API_KEY remote/$(RANDOM_YAML)
 
 remote_nocontroller_train_lichess:
 	sky launch -c boardLichessCluster --use-spot --env WANDB_API_KEY remote/$(LICHESS_YAML)
@@ -91,12 +91,22 @@ BENCHMARK1 := benchmark1.py
 BENCHMARK2 := benchmark2.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
+##ok
 M1 := evaluation/eval_models/lichess9gb_8layer_2K.pth
+
+##lance
 M2 := evaluation/eval_models/lichess9gb_8layer_21K.pth
 M3 := evaluation/eval_models/random16M_8layer_6K.pth
 M4 := evaluation/eval_models/random16M_8layer_12K.pth
 M5 := evaluation/eval_models/random16M_8layer_22K.pth
-
+M6 := evaluation/eval_models/lichess9gb_8layer_30K.pth
+M7 := evaluation/eval_models/lichess9gb_8layer_40K.pth
+M8 := evaluation/eval_models/lichess9gb_8layer_50K.pth
+M9 := evaluation/eval_models/lichess9gb_8layer_60K.pth
+M0 := evaluation/eval_models/lichess9gb_8layer_70K.pth
+Ma := evaluation/eval_models/lichess9gb_8layer_80K.pth
+Mb := evaluation/eval_models/lichess9gb_8layer_90K.pth
+Mc := evaluation/eval_models/lichess9gb_8layer_100K.pth
 
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
@@ -124,7 +134,7 @@ generate_precompute_random_benchmark_games: generate_benchmark_games precompute_
 benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK2) \
 		eval \
-		--checkpoints $(M1) $(M2) $(M3) $(M4) $(M5) \
+		--checkpoints $(M2) $(M3) $(M4) $(M5) \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \

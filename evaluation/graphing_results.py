@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 import matplotlib.pyplot as plt
+import bisect
 
 def visualize_error_frequency(csv_file, datasets_to_include, model_prefixes):
     # Read the CSV file
@@ -110,11 +111,11 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves):
                 for i in range(len(moves_lists)):
                     total_moves += moves_lists[i]
                     errors_list = errors_lists[i]
-                    valid_mistakes = [e for e in errors_list if e < max_moves]
-                    num_mistakes += len(valid_mistakes) ##can be made faster
+                    idx = bisect.bisect_right(errors_list, max_moves)
+                    num_mistakes += idx
 
                 error_freq = num_mistakes/total_moves
-                iteration_vals.append(iteration)
+                iteration_vals.append(int(iteration[0:-1]))
                 error_freqs.append(error_freq)
 
             # Sort (iteration, frequency) pairs by iteration before plotting
@@ -123,8 +124,8 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves):
                 plt.plot(iteration_vals, error_freqs, marker='o',
                          label=f"{model} - {dataset}")
 
-    plt.title("Error Frequency vs. Iterations")
-    plt.xlabel("Iterations")
+    plt.title(f"Error Frequency vs. Iterations (under {max_moves} moves)")
+    plt.xlabel("Iterations (K)")
     plt.ylabel("Error Frequency (mistakes / max_moves)")
     plt.legend()
     plt.grid(True)
