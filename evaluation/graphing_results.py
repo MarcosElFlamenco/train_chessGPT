@@ -102,7 +102,7 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
             # Plot with gradient intensity for 'max_moves'
             if iteration_vals:
                 iteration_vals, error_freqs = zip(*sorted(zip(iteration_vals, error_freqs)))
-                gradient_alpha = 0.5 + 0.5 * (idx / len(max_moves_list))  # Vary transparency with max_moves
+                gradient_alpha = 0.3 + 0.7 * (idx / len(max_moves_list))  # Vary transparency with max_moves
                 plt.plot(iteration_vals, error_freqs, marker='o',
                          label=f"{model} - {dataset} - {max_moves}",
                          color=base_color, alpha=gradient_alpha, linewidth=2)
