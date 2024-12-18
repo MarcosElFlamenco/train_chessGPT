@@ -103,7 +103,8 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
             if iteration_vals:
                 iteration_vals, error_freqs = zip(*sorted(zip(iteration_vals, error_freqs)))
                 gradient_alpha = 0.3 + 0.7 * (idx / len(max_moves_list))  # Vary transparency with max_moves
-                plt.plot(iteration_vals, error_freqs, marker='o',
+                marker = 'o' if dataset == 'lichess13_100g_180m' else 'x' 
+                plt.plot(iteration_vals, error_freqs, marker=marker,
                          label=f"{model} - {dataset} - {max_moves}",
                          color=base_color, alpha=gradient_alpha, linewidth=2)
 
