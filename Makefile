@@ -91,7 +91,7 @@ BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
 BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
 BENCHMARK1 := benchmark1.py
-BENCHMARK2 := benchmark2.py
+BENCHMARK := benchmark_full_info.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
 ##ok
@@ -139,7 +139,7 @@ D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 
 benchmark_model:
-	$(PYTHON) evaluation/$(BENCHMARK2) \
+	$(PYTHON) evaluation/$(BENCHMARK) \
 		eval \
 		--checkpoints $(Mm) $(Mn) $(Mt) $(Mu) $(Mv) $(Mw) \
 		--datasets $(D1) $(D2) \
