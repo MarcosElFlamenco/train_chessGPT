@@ -112,12 +112,41 @@ M0 := evaluation/eval_models/lichess9gb_8layer_70K.pth
 Ma := evaluation/eval_models/lichess9gb_8layer_80K.pth
 Mb := evaluation/eval_models/lichess9gb_8layer_90K.pth
 Mc := evaluation/eval_models/lichess9gb_8layer_100K.pth
-
 Md := evaluation/eval_models/random16M_8layer_33K.pth
 Me := evaluation/eval_models/random16M_8layer_40K.pth
+Mf := evaluation/eval_models/random16M_8layer_50K.pth
+Mg := evaluation/eval_models/random16M_8layer_60K.pth
+Mh := evaluation/eval_models/random16M_8layer_70K.pth
+Mi := evaluation/eval_models/random16M_8layer_80K.pth
+Mj := evaluation/eval_models/random16M_8layer_90K.pth
+Mk := evaluation/eval_models/random16M_8layer_100K.pth
+Ml := evaluation/eval_models/lichess9gb_8layer_110K.pth
+Mm := evaluation/eval_models/lichess9gb_8layer_120K.pth
+Mn := evaluation/eval_models/lichess9gb_8layer_130K.pth
+Mo := evaluation/eval_models/lichess9gb_8layer_140K.pth
+Mp := evaluation/eval_models/lichess9gb_8layer_150K.pth
+Mq := evaluation/eval_models/lichess9gb_8layer_160K.pth
+Mr := evaluation/eval_models/lichess9gb_8layer_170K.pth
+
+##a tester
+
+Ms := evaluation/eval_models/lichess9gb_8layer_180K.pth
+
+
 
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
+
+benchmark_model:
+	$(PYTHON) evaluation/$(BENCHMARK2) \
+		eval \
+		--checkpoints $(Mm) \
+		--datasets $(D1) $(D2) \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+
+
 plot:
 	$(PYTHON) evaluation/graphing_results.py
 
@@ -138,15 +167,6 @@ generate_benchmark_games:
 		--move_column transcript
 
 generate_precompute_random_benchmark_games: generate_benchmark_games precompute_benchmark
-
-benchmark_model:
-	$(PYTHON) evaluation/$(BENCHMARK2) \
-		eval \
-		--checkpoints $(Md) $(Me) \
-		--datasets $(D1) $(D2) \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
 
 double_benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK1) \

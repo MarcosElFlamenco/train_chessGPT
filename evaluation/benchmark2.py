@@ -291,6 +291,22 @@ def run_validation_single_model(args):
         args: Parsed command-line arguments.
     """
     storage_file = 'evaluation/test_results.json'
+    import json
+    with open(storage_file, "r") as f:
+        test_results = json.load(f)
+
+    model2 = (args.checkpoint).split('/')[-1].split('.')[0]
+    model_split = model2.split('_')
+    model_iters = model_split[-1]
+    model_name = model2[:-(len(model_iters) + 1)]
+
+    dataset = (args.dataset).split('/')[-1].split('.')[0]
+
+
+    if (model_name in test_results) and (model_iters in test_results[model_name]) and (dataset in test_results[model_name][model_iters]):
+        print(f"The model {model_name} after {model_iters} iters has already been evaluated on {dataset} dataset")
+        return
+
     # Load meta information
     vocab_size, stoi, itos = load_meta(args.data_dir)
     print(f"Vocab Size: {vocab_size}")
@@ -444,9 +460,6 @@ def run_validation_single_model(args):
     print(f"  Min frequency: {min_freq:.2f}%\n")
 
     ##update file
-    import json
-    with open(storage_file, "r") as f:
-        test_results = json.load(f)
     add_result(test_results, args.checkpoint, args.dataset, game_dics)
 
     with open(storage_file, "w") as f:
