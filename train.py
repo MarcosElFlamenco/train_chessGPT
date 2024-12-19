@@ -196,8 +196,6 @@ if os.path.exists(meta_path):
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
                 bias=bias, vocab_size=None, dropout=dropout) # start with model_args from command line
 
-
-
 if init_from == 'resume':
 
     # resume training from a checkpoint.
@@ -210,8 +208,10 @@ if init_from == 'resume':
         checkpoint_model_args = checkpoint['model_args']
         # force these config attributes to be equal otherwise we can't even resume training
         # the rest of the attributes (e.g. dropout) can stay as desired from command line
+        print(f"Rebuilding model from checkpoint {checkpoint}")
         for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size']:
             model_args[k] = checkpoint_model_args[k]
+            print(f"{k} : {checkpoint_model_args[k]}")
         # create the model
         gptconf = GPTConfig(**model_args)
         model = GPT(gptconf)
@@ -243,8 +243,10 @@ if init_from == 'scratch':
     print("Initializing a new model from scratch")
     # determine the vocab size we'll use for from-scratch training
     if meta_vocab_size is None:
-        print("defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)")
-    model_args['vocab_size'] = meta_vocab_size if meta_vocab_size is not None else 50304
+        print("defaulting to vocab_size of chessGPT to 32")
+    else:
+        print(f"Taking the meta vocab size of {meta_vocab_size}")
+    model_args['vocab_size'] = meta_vocab_size if meta_vocab_size is not None else 32
     gptconf = GPTConfig(**model_args)
     model = GPT(gptconf)
 elif init_from.startswith('gpt2'):
@@ -359,7 +361,7 @@ while True:
             mlflow.log_metric('lr', lr)
             mlflow.log_metric('mfu', running_mfu*100)
 
-        if (losses['val'] < best_val_loss or always_save_checkpoint) and (not local_bypass):
+        if (losses['val'] < best_val_loss or always_save_checkpoint):
             best_val_loss = losses['val']
             if iter_num > 0:
                 checkpoint = {
@@ -377,7 +379,10 @@ while True:
                 torch.save(checkpoint, local_file_path)
                 checkpoint_key = checkpoint_key_prefix + f"_{iter_num//1000}" + "K.pth"
                 print(f'upload checkpoint {checkpoint_key} to bucket {bucket_name}')
-                upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
+                if local_bypass:
+                    print("upload bypassed because local")
+                else:
+                    upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
     if eval_only and iter_num == 0:
         break
 

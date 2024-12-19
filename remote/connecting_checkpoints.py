@@ -22,7 +22,11 @@ def checkpoint_exists(bucket_name, checkpoint_key):
 
 def download_checkpoint(bucket_name, checkpoint_key, local_file_path):
     s3 = boto3.client('s3')
-    s3.download_file(bucket_name, checkpoint_key, local_file_path)
+    try:
+        s3.download_file(bucket_name, checkpoint_key, local_file_path)
+        return 0
+    except e:
+        return 1
 
 def upload_checkpoint(local_file_path, bucket_name, checkpoint_key):
     s3 = boto3.client('s3')
@@ -58,17 +62,19 @@ def load_checkpoint(bucket_name, checkpoint_key_prefix, device):
     contents = List_s3_objects(bucket_name, prefix=checkpoint_key_prefix)
 
     if contents:
-        print(contents)
         full_prefix = checkpoint_key_prefix + "_"
         versions = [int(s.removeprefix(full_prefix).removesuffix("K.pth")) for s in contents] 
-        print(versions)
         most_recent_version = max(versions)
         checkpoint_key = checkpoint_key_prefix + "_" + str(most_recent_version) + "K.pth"
         print('A checkpoint does in fact exist, now loading...')
         print(f"Resuming training from checkpoint {checkpoint_key} in bucket {bucket_name}")
-        download_checkpoint(bucket_name, checkpoint_key, local_file_path)
-        checkpoint = torch.load(local_file_path, map_location=device)
-        return checkpoint
+        try:
+            download_checkpoint(bucket_name, checkpoint_key, local_file_path)
+            checkpoint = torch.load(local_file_path, map_location=device)
+            return checkpoint
+        except Exception as e:
+            print(f"Got the following error {e} so we're gonna start from scratch")
+            return None
     else:
         return None
 

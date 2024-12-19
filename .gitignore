@@ -9,6 +9,7 @@
 *.pyc
 *.csv
 *.zip
+*.bin
 models
 input.txt
 chessEnv/
@@ -18,11 +19,15 @@ mlflow_storage/
 mlruns/
 __pycache__
 
+##testing
+chess_saver/
+first_few_lines.txt
 
-data/lichess_hf_dataset/train9gb.bin
-data/lichess_hf_dataset/val9gb.bin
-data/lichess_hf_dataset/train1M.bin
-data/lichess_hf_dataset/val1M.bin
+
+data/random_generated/train9gb.bin
+data/random_generated/val9gb.bin
+data/random_generated/train1M.bin
+data/random_generated/val1M.bin
 data/lichess_hf_dataset/pgns/
 
 evaluation/eval_models/*
