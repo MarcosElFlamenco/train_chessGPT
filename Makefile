@@ -127,12 +127,13 @@ Mo := evaluation/eval_models/lichess9gb_8layer_140K.pth
 Mp := evaluation/eval_models/lichess9gb_8layer_150K.pth
 Mq := evaluation/eval_models/lichess9gb_8layer_160K.pth
 Mr := evaluation/eval_models/lichess9gb_8layer_170K.pth
-
-##a tester
-
 Ms := evaluation/eval_models/lichess9gb_8layer_180K.pth
 
 
+Mt := evaluation/eval_models/random16M_8layer_110K.pth
+Mu := evaluation/eval_models/random16M_8layer_120K.pth
+Mv := evaluation/eval_models/random16M_8layer_130K.pth
+Mw := evaluation/eval_models/random16M_8layer_140K.pth
 
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
@@ -140,7 +141,7 @@ D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK2) \
 		eval \
-		--checkpoints $(Mm) \
+		--checkpoints $(Mm) $(Mn) $(Mt) $(Mu) $(Mv) $(Mw) \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \

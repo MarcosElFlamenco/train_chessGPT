@@ -125,3 +125,61 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
     plt.legend(unique_labels.values(), unique_labels.keys(), title="Model - Dataset", loc='upper right')
     plt.tight_layout()
     plt.show()
+
+
+def plot_error_cloud(data, model_names, datasets, max_moves_considered, max_games_considered):
+    """
+    Plot a cloud of error indices for specified models, iterations, and datasets.
+
+    Args:
+    - data (dict): The dictionary containing error information.
+    - model_names (list): List of model names in the form `model_baseName_iteration`.
+    - datasets (list): List of datasets to include in the graph.
+
+    This function creates a scatter plot for each model-dataset pair.
+    """
+    plt.figure(figsize=(12, 7))
+
+    for model_full_name in model_names:
+        # Parse model base name and iteration from the full name
+        if '_' not in model_full_name:
+            print(f"Invalid model name: {model_full_name}")
+            continue
+
+        model_parts = model_full_name.split('_')
+        base_name = '_'.join(model_parts[:-1])  # Everything before the last part
+        iteration_str = model_parts[-1]  # The last part (e.g., '30K')
+        iteration = iteration_str # Convert '30K' to integer (e.g., 30000)
+
+        if base_name not in data:
+            print(f"Warning: Model '{base_name}' not found in data.")
+            continue
+
+        if iteration not in data[base_name]:
+            print(f"Warning: Iteration {iteration} not found for model '{base_name}'.")
+            continue
+
+        for dataset in datasets:
+            if dataset not in data[base_name][iteration]:
+                print(f"Warning: Dataset '{dataset}' not found for model '{base_name}' at iteration {iteration}.")
+                continue
+
+            # Retrieve error indices for the model-dataset combination
+            max_games_considered = min(max_games_considered,100)
+            errors_info = data[base_name][iteration][dataset]
+            games_considered = [game for game in errors_info][:max_games_considered]
+            error_indices_as_sets = [game['error_indices'] for game in games_considered]
+            error_indices_under_max_moves = [e[:bisect.bisect_right(e,max_moves_considered)] for e in error_indices_as_sets]
+            error_indices = [indices for indices_set in error_indices_under_max_moves for indices in indices_set]
+#            error_indices = [error for e in errors_info for error in e["error_indices"]]
+
+            # Plot a line of points for the error indices
+            plt.scatter(error_indices, [f"{base_name}--{iteration}--{dataset}"] * len(error_indices), alpha=0.6, label=f"{base_name}_{dataset}", marker='|')
+
+    plt.title("Error Indices for Models and Datasets")
+    plt.xlabel("Error Index")
+    plt.ylabel("Model-Dataset")
+    plt.grid(True)
+    plt.legend(loc='best', fontsize=8, title="Model-Dataset")
+    plt.tight_layout()
+    plt.show()
