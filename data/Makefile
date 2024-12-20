@@ -15,6 +15,8 @@ MIN_LEN := 30
 INPUT_LENGTH := 1023
 TEST_SIZE := 0.1
 
+CURRENT_DATASET := twic_dataset
+
 BASE := 9gb
 
 testing:
@@ -27,7 +29,7 @@ download:
 		--post_clean 1
 
 download_twic:
-	python3 download_twic.py \
+	python3 download_and_upload/download_twic.py \
 		--pgn_directory $(PGN_DIR) \
 		--url $(TWIC_URL) \
 
@@ -37,12 +39,12 @@ download_twic:
 	
 csv:
 	python3 filter/pgn_to_csv.py \
-		$(PGN_DIR) \
-		$(CSV_FILE) \
+		$(CURRENT_DATASET)/$(PGN_DIR) \
+		$(CURRENT_DATASET)/$(CSV_FILE) \
 		--min_elo $(MIN_ELO) \
 		--max_elo $(MAX_ELO) \
 		--min_length $(MIN_LEN) \
-		--processed_files processed_files.txt
+		--processed_files $(CURRENT_DATASET)/processed_files.txt
 		--debug
 
 cast:
@@ -50,14 +52,17 @@ cast:
 		--csv_file $(CSV_FILE) \
 		--dataset_name $(HF_DATASET)
 
+LICHESS_CSV_FILE := lichess_hf_dataset/lichess_9gb.csv
+LICHESS_BLOCKS_FILE := lichess_hf_dataset/lichess_9gb_blocks.csv
+
 blocks:
 	python3 filter/csv_to_blocks.py \
-		--input_file $(CSV_FILE) \
+		--input_file $(LICHESS_CSV_FILE) \
 		--input_length $(INPUT_LENGTH) \
-		--csv_type quotes
+
 tokens:
 	python3 tokenizeData.py \
-		--blocks_file $(BLOCKS_FILE) \
+		--blocks_file $(LICHESS_BLOCKS_FILE) \
 		--bin_dir $(BIN_DIR) \
 		--test_size $(TEST_SIZE)
 
