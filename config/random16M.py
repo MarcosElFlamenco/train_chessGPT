@@ -13,8 +13,8 @@ wandb_project = "chess-gpt-random-vocab32"
 wandb_run_name = "8layer_lichess"
 
 dataset = "random_generated"
-gradient_accumulation_steps = 10
-batch_size = 20
+gradient_accumulation_steps = 4
+batch_size = 100
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
 init_from = 'resume'
 

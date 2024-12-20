@@ -1,17 +1,17 @@
 PYTHON := python3
 HF_REPO := MarcosElFlamenco/chess_games
 
-BASE := output
+BASE := twic_900
 CSV_FILE := $(BASE).csv
 BLOCKS_FILE := $(BASE)_blocks.csv
 
-PGN_DIR := pgns 
+PGN_DIR := twic_extracted_pgn
 S3_BUCKET := go-bucket-craft
 S3_DIR := dataset
 
 MIN_ELO := 0
 MAX_ELO := 30000
-MIN_LEN := 365
+MIN_LEN := 30
 INPUT_LENGTH := 1023
 TEST_SIZE := 0.1
 
@@ -26,16 +26,24 @@ download:
 		--zst_url $(MAR20) \
 		--post_clean 1
 
+download_twic:
+	python3 download_twic.py \
+		--pgn_directory $(PGN_DIR) \
+		--url $(TWIC_URL) \
+
+
 ## $(LINK_MAR24) $(LINK_APR24) $(LINK_JUN24) $(LINK_JUL24) $(LINK_AUG24) $(LINK_SEP24) \
 ##clean 1 means do clean and 0 means dont
 	
 csv:
 	python3 filter/pgn_to_csv.py \
-		--pgn_directory $(PGN_DIR) \
-		--output_csv $(CSV_FILE) \
+		$(PGN_DIR) \
+		$(CSV_FILE) \
 		--min_elo $(MIN_ELO) \
 		--max_elo $(MAX_ELO) \
-		--min_len $(MIN_LEN) \
+		--min_length $(MIN_LEN) \
+		--processed_files processed_files.txt
+		--debug
 
 cast:
 	python3 filter/castDataset.py \
@@ -68,6 +76,10 @@ bin_zip:
 		--files bins
 
 
+stats_in_lichess:
+	python3 process_datasets.py \
+		train9gb.bin
+
 uploadhf:
 	python3 filter/upload_to_hf.py \
 		--source_dir $(ZIP_DIR) \
@@ -93,12 +105,12 @@ hfdataset: download csv blocks block_zip uploads3 tokens bin_zip uploads3
 	echo 'pipeline finished'
 
 ##RANDOM GENERATION
-BIN_CATEGORY := forProbes
+BIN_CATEGORY := forstats
 RANDOM := random$(BIN_CATEGORY)
 RANDOM_CSV := $(RANDOM).csv
 RANDOM_PGN := $(RANDOM).pgn
 RANDOM_BLOCKS := $(RANDOM)_blocks.csv
-NUM_RANDOM_GAMES := 30000
+NUM_RANDOM_GAMES := 3000
 RANDOM_GEN_LOG_FREQ := 1000
 RANDOM_GEN_SAVE_FREQ := 50000
 RANDOM_INPUT_LENGTH := 1023

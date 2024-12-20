@@ -10,6 +10,8 @@
 *.csv
 *.zip
 *.bin
+*.pgn
+
 models
 input.txt
 chessEnv/
@@ -24,10 +26,6 @@ chess_saver/
 first_few_lines.txt
 
 
-data/random_generated/train9gb.bin
-data/random_generated/val9gb.bin
-data/random_generated/train1M.bin
-data/random_generated/val1M.bin
 data/lichess_hf_dataset/pgns/
 
 evaluation/eval_models/*

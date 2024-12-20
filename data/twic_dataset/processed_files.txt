@@ -1,0 +1,7 @@
+/home/oscar/train_ChessGPT/data/lichess_hf_dataset/twic_extracted_pgn/twic1063.pgn
+/home/oscar/train_ChessGPT/data/lichess_hf_dataset/twic_extracted_pgn/twic1057.pgn
+/home/oscar/train_ChessGPT/data/lichess_hf_dataset/twic_extracted_pgn/twic1158.pgn
+/home/oscar/train_ChessGPT/data/lichess_hf_dataset/twic_extracted_pgn/twic1394.pgn
+/home/oscar/train_ChessGPT/data/lichess_hf_dataset/twic_extracted_pgn/twic1240.pgn
+/home/oscar/train_ChessGPT/data/lichess_hf_dataset/twic_extracted_pgn/twic1325.pgn
+/home/oscar/train_ChessGPT/data/lichess_hf_dataset/twic_extracted_pgn/twic1127.pgn

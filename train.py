@@ -96,7 +96,7 @@ config = {k: globals()[k] for k in config_keys} # will be useful for logging
 print(f"decay lr {decay_lr}")
 
 data_bucket_name = "chess-data-bucket-craft"
-data_dir = os.path.join('data', dataset)
+data_dir = os.path.join('data')
 
 train_name = f'train{data_type}.bin'
 val_name = f'val{data_type}.bin'
