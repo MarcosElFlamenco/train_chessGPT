@@ -9,7 +9,7 @@ always_save_checkpoint = False
 
 wandb_log = True 
 mlflow_log = False 
-wandb_project = "chess-gpt-batch"
+wandb_project = "chess-gpt-lichesstrain"
 wandb_run_name = "8layer_lichess"
 
 dataset = "lichess_hf_dataset"
@@ -33,7 +33,13 @@ beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 warmup_iters = 2000  # not super necessary potentially
 compile = False
 
+<<<<<<< HEAD:config/random16M_12layers.py
 data_type = '16MnoS'
 checkpoint_key = 'random16M_8layer_A.pth'
 bucket_name = 'chess-gpt-checkpoints'
 verbose = True
+=======
+data_type = '9gb'
+checkpoint_key = 'lichess_8layer_16M.pth'
+bucket_name = 'bigger-model'
+>>>>>>> d0ee931 (local is right config):config/lichess16M.py
