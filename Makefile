@@ -94,42 +94,40 @@ BENCHMARK1 := benchmark1.py
 BENCHMARK := benchmark_full_info.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
+#done
 M1 := evaluation/eval_models/big_random16M_vocab32_100K.pth
 M2 := evaluation/eval_models/big_random16M_vocab32_150K.pth
 M3 := evaluation/eval_models/big_random16M_vocab32_200K.pth
-
 M4 := evaluation/eval_models/lichess9gb_vocab32_100K.pth
 M5 := evaluation/eval_models/lichess9gb_vocab32_150K.pth
 M6 := evaluation/eval_models/lichess9gb_vocab32_200K.pth
-
+#run
 M7 := evaluation/eval_models/lichess9gb_vocab32_175K.pth
 M8 := evaluation/eval_models/big_random16M_vocab32_175K.pth
+#running
+M9 := evaluation/eval_models/lichess9gb_vocab32_170K.pth
+M0 := evaluation/eval_models/big_random16M_vocab32_170K.pth
 
-M9 := evaluation/eval_models/lichess9gb_8layer_60K.pth
-M0 := evaluation/eval_models/lichess9gb_8layer_70K.pth
-Ma := evaluation/eval_models/lichess9gb_8layer_80K.pth
-Mb := evaluation/eval_models/lichess9gb_8layer_90K.pth
-Mc := evaluation/eval_models/lichess9gb_8layer_100K.pth
-Md := evaluation/eval_models/random16M_8layer_33K.pth
-Me := evaluation/eval_models/random16M_8layer_40K.pth
-Mf := evaluation/eval_models/random16M_8layer_50K.pth
-Mg := evaluation/eval_models/random16M_8layer_60K.pth
-Mh := evaluation/eval_models/random16M_8layer_70K.pth
-Mi := evaluation/eval_models/random16M_8layer_80K.pth
-Mj := evaluation/eval_models/random16M_8layer_90K.pth
-Mk := evaluation/eval_models/random16M_8layer_100K.pth
-Ml := evaluation/eval_models/lichess9gb_8layer_110K.pth
-Mm := evaluation/eval_models/lichess9gb_8layer_120K.pth
-Mn := evaluation/eval_models/lichess9gb_8layer_130K.pth
-Mo := evaluation/eval_models/lichess9gb_8layer_140K.pth
-Mp := evaluation/eval_models/lichess9gb_8layer_150K.pth
-Mq := evaluation/eval_models/lichess9gb_8layer_160K.pth
-Mr := evaluation/eval_models/lichess9gb_8layer_170K.pth
-Ms := evaluation/eval_models/lichess9gb_8layer_180K.pth
-Mt := evaluation/eval_models/random16M_8layer_110K.pth
-Mu := evaluation/eval_models/random16M_8layer_120K.pth
-Mv := evaluation/eval_models/random16M_8layer_130K.pth
-Mw := evaluation/eval_models/random16M_8layer_140K.pth
+#to run
+Ma := evaluation/eval_models/lichess9gb_vocab32_160K.pth
+Mb := evaluation/eval_models/big_random16M_vocab32_160K.pth
+Mc := evaluation/eval_models/lichess9gb_vocab32_165K.pth
+Md := evaluation/eval_models/big_random16M_vocab32_165K.pth
+Me := evaluation/eval_models/lichess9gb_vocab32_180K.pth
+Mf := evaluation/eval_models/big_random16M_vocab32_180K.pth
+batch := $(Ma) $(Mb) $(Mc) $(Md) $(Me) $(Mf)
+
+
+M := evaluation/eval_models/lichess9gb_vocab32_180K.pth
+M := evaluation/eval_models/big_random16M_vocab32_180K.pth
+M := evaluation/eval_models/lichess9gb_vocab32_180K.pth
+M := evaluation/eval_models/big_random16M_vocab32_180K.pth
+M := evaluation/eval_models/lichess9gb_vocab32_180K.pth
+M := evaluation/eval_models/big_random16M_vocab32_180K.pth
+
+
+
+
 
 
 D1 := evaluation/eval_datasets/random100games.pkl
@@ -138,7 +136,7 @@ D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK) \
 		eval \
-		--checkpoints $(M7) $(M8) \
+		--checkpoints $(M9) $(M0) \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
