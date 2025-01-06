@@ -1,7 +1,7 @@
 PYTHON := python3
 TRAIN := train.py
 PREPARE := data/lichess_hf_dataset/prepare.py
-DATA_DIR := data/lichess_hf_dataset
+DATA_DIR := data
 CONFIG := local.py
 LICHESS_YAML := lichess.yaml
 RANDOM_YAML := random.yaml
@@ -94,19 +94,17 @@ BENCHMARK1 := benchmark1.py
 BENCHMARK := benchmark_full_info.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
-##ok
-M1 := evaluation/eval_models/lichess9gb_8layer_2K.pth
+M1 := evaluation/eval_models/big_random16M_vocab32_100K.pth
+M2 := evaluation/eval_models/big_random16M_vocab32_150K.pth
+M3 := evaluation/eval_models/big_random16M_vocab32_200K.pth
 
-##ok
-M2 := evaluation/eval_models/lichess9gb_8layer_21K.pth
-M3 := evaluation/eval_models/random16M_8layer_6K.pth
-M4 := evaluation/eval_models/random16M_8layer_12K.pth
-M5 := evaluation/eval_models/random16M_8layer_22K.pth
+M4 := evaluation/eval_models/lichess9gb_vocab32_100K.pth
+M5 := evaluation/eval_models/lichess9gb_vocab32_150K.pth
+M6 := evaluation/eval_models/lichess9gb_vocab32_200K.pth
 
-#ok
-M6 := evaluation/eval_models/lichess9gb_8layer_30K.pth
-M7 := evaluation/eval_models/lichess9gb_8layer_40K.pth
-M8 := evaluation/eval_models/lichess9gb_8layer_50K.pth
+M7 := evaluation/eval_models/lichess9gb_vocab32_175K.pth
+M8 := evaluation/eval_models/big_random16M_vocab32_175K.pth
+
 M9 := evaluation/eval_models/lichess9gb_8layer_60K.pth
 M0 := evaluation/eval_models/lichess9gb_8layer_70K.pth
 Ma := evaluation/eval_models/lichess9gb_8layer_80K.pth
@@ -128,12 +126,11 @@ Mp := evaluation/eval_models/lichess9gb_8layer_150K.pth
 Mq := evaluation/eval_models/lichess9gb_8layer_160K.pth
 Mr := evaluation/eval_models/lichess9gb_8layer_170K.pth
 Ms := evaluation/eval_models/lichess9gb_8layer_180K.pth
-
-
 Mt := evaluation/eval_models/random16M_8layer_110K.pth
 Mu := evaluation/eval_models/random16M_8layer_120K.pth
 Mv := evaluation/eval_models/random16M_8layer_130K.pth
 Mw := evaluation/eval_models/random16M_8layer_140K.pth
+
 
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
@@ -141,7 +138,7 @@ D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 benchmark_model:
 	$(PYTHON) evaluation/$(BENCHMARK) \
 		eval \
-		--checkpoints $(Mm) $(Mn) $(Mt) $(Mu) $(Mv) $(Mw) \
+		--checkpoints $(M7) $(M8) \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
