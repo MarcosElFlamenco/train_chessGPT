@@ -9,10 +9,10 @@ always_save_checkpoint = True
 
 wandb_log = True 
 mlflow_log = False 
-wandb_project = "chess-gpt-random-vocab32"
+wandb_project = "chess-gpt-random-big-vocab32"
 wandb_run_name = "8layer_lichess"
 
-dataset = "random_generated"
+dataset = "big_random_generated"
 gradient_accumulation_steps = 4
 batch_size = 100
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
@@ -30,10 +30,11 @@ max_iters = 300000
 lr_decay_iters = max_iters  # make equal to max_iters usually
 min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
+grad_clip = 1.0
 
 compile = True
 
 data_type = '16M'
-checkpoint_key_prefix = f"random{data_type}_vocab32"
+checkpoint_key_prefix = f"big_random{data_type}_vocab32"
 bucket_name = 'chess-gpt-checkpoints'
 verbose = False

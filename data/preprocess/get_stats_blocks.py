@@ -13,12 +13,14 @@ def analyze_games(file_path):
     min_length = float('inf')
     max_length = 0
 
-    with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
+    with open(file_path, 'rb') as file:
         for iter, line in enumerate(file, start=1):
-            if iter % 10000 == 0:
+            if iter % 1000 == 0:
                 print(f"Processed {iter} lines...")
+                print(f"Current stats are game count: {game_count}, avg length: {total_length/game_count}")
+                print(f"Min: {min_length}, Max: {max_length}")
 
-            games = line.split(';')
+            games = line.split(15)
             line_game_lengths = map(len, games)
 
             # Update statistics
@@ -44,7 +46,7 @@ def analyze_games(file_path):
 
 
 # Example Usage
-file_path = "lichess_hf_dataset/lichess_9gb_blocks.csv"
+file_path = "data/lichess_hf_dataset/train9gb.bin"
 stats = analyze_games(file_path)
 
 print(f"Game Count: {stats['game_count']}")

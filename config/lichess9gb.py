@@ -10,7 +10,7 @@ always_save_checkpoint = True
 wandb_log = True 
 mlflow_log = False 
 wandb_project = "chess-gpt-lichess-train"
-wandb_run_name = "8layer_lichess"
+wandb_run_name = "vocab32_lichess"
 
 dataset = "lichess_hf_dataset"
 gradient_accumulation_steps = 10
@@ -29,11 +29,13 @@ max_iters =  200000
 lr_decay_iters = max_iters  # make equal to max_iters usually
 min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
+grad_clip = 0.0
 
 warmup_iters = 2000  # not super necessary potentially
 compile = True 
 
 data_type = '9gb'
-checkpoint_key_prefix = f"lichess{data_type}_8layer"
+checkpoint_key_prefix = f"lichess{data_type}_vocab32"
 bucket_name = 'chess-gpt-checkpoints'
+data_bucket_name = "bins-bucket-craft"
 verbose = False
