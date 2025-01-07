@@ -1,3 +1,9 @@
+import pandas as pd
+import re
+import matplotlib.pyplot as plt
+import bisect
+import matplotlib.cm as cm
+
 def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list):
     """
     Enhanced version of the error frequency plot:

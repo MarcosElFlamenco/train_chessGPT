@@ -1,9 +1,9 @@
 PYTHON := python3
 HF_REPO := MarcosElFlamenco/chess_games
 
-BASE := twic_900
-CSV_FILE := $(BASE).csv
-BLOCKS_FILE := $(BASE)_blocks.csv
+BASE := random_small
+CSV_FILE := random_dataset/$(BASE).csv
+BLOCKS_FILE := random_dataset/$(BASE)_blocks.csv
 
 PGN_DIR := twic_extracted_pgn
 S3_BUCKET := go-bucket-craft
@@ -13,7 +13,7 @@ MIN_ELO := 0
 MAX_ELO := 30000
 MIN_LEN := 30
 INPUT_LENGTH := 1023
-TEST_SIZE := 0.1
+TEST_SIZE := 0.01
 
 CURRENT_DATASET := twic_dataset
 
@@ -57,12 +57,13 @@ LICHESS_BLOCKS_FILE := lichess_hf_dataset/lichess_9gb_blocks.csv
 
 blocks:
 	python3 filter/csv_to_blocks.py \
-		--input_file $(LICHESS_CSV_FILE) \
+		--input_file $(CSV_FILE) \
 		--input_length $(INPUT_LENGTH) \
+		--csv_type quotes
 
 tokens:
 	python3 tokenizeData.py \
-		--blocks_file $(LICHESS_BLOCKS_FILE) \
+		--blocks_file $(BLOCKS_FILE) \
 		--bin_dir $(BIN_DIR) \
 		--test_size $(TEST_SIZE)
 

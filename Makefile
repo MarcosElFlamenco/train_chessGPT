@@ -121,8 +121,11 @@ Mg := evaluation/eval_models/lichess9gb_vocab32_280K.pth
 Mh := evaluation/eval_models/big_random16M_vocab32_250K.pth
 Mj := evaluation/eval_models/lichess9gb_vocab32_250K.pth
 Mi := evaluation/eval_models/big_random16M_vocab32_300K.pth
-M := evaluation/eval_models/lichess9gb_vocab32_180K.pth
-M := evaluation/eval_models/big_random16M_vocab32_180K.pth
+
+
+Mk := evaluation/eval_models/lichess9gb_vocab32_190K.pth
+Ml := evaluation/eval_models/lichess9gb_vocab32_225K.pth
+Mn := evaluation/eval_models/big_random16M_vocab32_280K.pth
 
 
 
@@ -135,7 +138,7 @@ D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 benchmark_models:
 	$(PYTHON) evaluation/$(BENCHMARK) \
 		eval \
-		--checkpoints $(Mh) $(Mi) $(Mg) $(Mj) \
+		--checkpoints $(Mk) $(Ml) $(Mn) $(Mj) \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
