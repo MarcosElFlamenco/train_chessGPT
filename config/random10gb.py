@@ -7,7 +7,7 @@ log_interval = 100  # don't print too too often
 
 always_save_checkpoint = True
 
-wandb_log = True 
+wandb_log = False
 mlflow_log = False 
 wandb_project = "chess-gpt-random-small-vocab32"
 wandb_run_name = "8layer_lichess"
@@ -37,4 +37,4 @@ compile = True
 data_type = '10gb'
 checkpoint_key_prefix = f"small_random{data_type}_vocab32"
 bucket_name = 'chess-gpt-checkpoints'
-verbose = False
+verbose = True
