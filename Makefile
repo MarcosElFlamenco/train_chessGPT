@@ -94,28 +94,6 @@ BENCHMARK1 := benchmark1.py
 BENCHMARK := benchmark_full_info.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
-#done
-M1 := evaluation/eval_models/big_random16M_vocab32_100K.pth
-M2 := evaluation/eval_models/big_random16M_vocab32_150K.pth
-M3 := evaluation/eval_models/big_random16M_vocab32_200K.pth
-M4 := evaluation/eval_models/lichess9gb_vocab32_100K.pth
-M5 := evaluation/eval_models/lichess9gb_vocab32_150K.pth
-M6 := evaluation/eval_models/lichess9gb_vocab32_200K.pth
-#run
-M7 := evaluation/eval_models/lichess9gb_vocab32_175K.pth
-M8 := evaluation/eval_models/big_random16M_vocab32_175K.pth
-#running
-M9 := evaluation/eval_models/lichess9gb_vocab32_170K.pth
-M0 := evaluation/eval_models/big_random16M_vocab32_170K.pth
-
-# run
-Ma := evaluation/eval_models/lichess9gb_vocab32_160K.pth
-Mb := evaluation/eval_models/big_random16M_vocab32_160K.pth
-Mc := evaluation/eval_models/lichess9gb_vocab32_165K.pth
-Md := evaluation/eval_models/big_random16M_vocab32_165K.pth
-Me := evaluation/eval_models/lichess9gb_vocab32_180K.pth
-Mf := evaluation/eval_models/big_random16M_vocab32_180K.pth
-
 
 Mg := evaluation/eval_models/lichess9gb_vocab32_280K.pth
 Mh := evaluation/eval_models/big_random16M_vocab32_250K.pth
@@ -127,7 +105,9 @@ Mk := evaluation/eval_models/lichess9gb_vocab32_190K.pth
 Ml := evaluation/eval_models/lichess9gb_vocab32_225K.pth
 Mn := evaluation/eval_models/big_random16M_vocab32_280K.pth
 
-
+##new benchmarks
+Ma = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_30K.pth
+Mb = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_40K.pth
 
 
 
@@ -138,7 +118,7 @@ D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 benchmark_models:
 	$(PYTHON) evaluation/$(BENCHMARK) \
 		eval \
-		--checkpoints $(Mk) $(Ml) $(Mn) $(Mj) \
+		--checkpoints $(Ma) $(Mb) \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \

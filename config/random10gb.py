@@ -37,4 +37,5 @@ compile = True
 data_type = '10gb'
 checkpoint_key_prefix = f"small_random{data_type}_vocab32"
 bucket_name = 'chess-gpt-checkpoints'
+data_bucket_name = "bins-bucket-craft"
 verbose = True
