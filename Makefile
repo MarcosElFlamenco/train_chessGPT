@@ -6,6 +6,9 @@ CONFIG := local.py
 LICHESS_YAML := lichess.yaml
 RANDOM_YAML := random.yaml
 
+
+
+
 local_train: $(TRAIN) 
 	$(PYTHON) $(TRAIN) \
 		config/$(CONFIG)
@@ -50,6 +53,16 @@ dummy_remote:
 
 print_legal_moves:
 	python3 evaluation/legal_moves.py
+
+elo_evaluation:
+	python3 evaluation/evaluate_elo.py \
+		--checkpoint lichess9gb_vocab32_280.pth \
+		--num_games 100 \
+		--time_per_move 0.1 \
+		--max_retries 3 \
+		--save_file results.pkl \
+		--save_dir elo_results \
+		--stockfish_path ?\
 
 ##RANDOM GENERATED 80 MOVES
 INPUT_PGN := ';1. c3 c6 2. e3 Nf6 3. Ba6 Nd5 4. Bd3 f5 5. f4 Nxe3 6. b4 e6 7. c4 Nc2+ 8. Kf1 Bxb4 9. Nh3 Nxa1 10. Bb2 b6 11. Ng5 Bf8 12. Be5 Ba6 13. Qh5+ Ke7 14. Bc3 Bb7 15. Kg1 e5 16. Bc2 exf4 17. Qg6 Nb3 18. Na3 f3 19. Qe6+ dxe6 20. Bf6+ Kd7 21. Be7 Ba6 22. Bb1 Na5 23. Nxf3 Bxe7 24. Ne1 Kc7 25. Bxf5 Qxd2 26. Bh3 Qd5 27. g3 Bb4 28. Bg2 Bxa3 29. g4 h6 30. Bxd5 cxd5 31. Nf3 Rf8 32. h4 b5 33. g5 Be7 34. gxh6 Kd6 35. Rh3 Rh8 36. Ne1 Kc7 37. Rg3 Rxh6 38. Ra3 Bxa3 39. Kf1 Kb6 40. Nc2 bxc4 41. Ne3 Bb4 42. Nxc4+ Bxc4+ 43. Kg2 Be7 44. Kh3 Ba6 45. Kh2 Rh5 46. Kg3 Ba3 47. Kg4 Kb7 48. Kh3 Be7 49. Kh2 d4 50. a3 Rh6 51. Kh3 g5 52. a4 d3 53. Kg3 Bc5 54. Kh2 Bd6+ 55. Kh1 Bh2 56. Kg2 d2 57. Kh3 gxh4 58. Kg4 Nc4 59. Kg5 Bb5 60. Kxh6 Ba6 61. Kg6 Nd7 62. Kh7 Bc7 63. Kg7 Kb6 64. Kf7 Nd6+ 65. Kxe6 Nc8 66. Kxd7 d1=R+ 67. Ke6 Ne7 68. Kf6 Rf8+ 69. Kxe7 Bd3 70. Kd7 Rd2 71. a5+ Ka6 72. Ke7 Rh2 73. Kd7 Rh3 74. Ke6 Bxa5 75. Ke7 Kb7 76. Kd7 Re8 77. Kxe8 Bc3 78. Ke7 Rh1 79. Kd8 Ba1 80. Ke7 Rd1 81. Kd7 Rh1 82. Ke7 Bb2 83. Kf'
@@ -109,9 +122,6 @@ Mn := evaluation/eval_models/big_random16M_vocab32_280K.pth
 Ma = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_30K.pth
 Mb = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_40K.pth
 
-
-
-
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 
@@ -123,7 +133,6 @@ benchmark_models:
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
-
 
 plot:
 	$(PYTHON) evaluation/graphing_results.py
@@ -146,84 +155,10 @@ generate_benchmark_games:
 
 generate_precompute_random_benchmark_games: generate_benchmark_games precompute_benchmark
 
-double_benchmark_model:
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint $(CHECKPOINT) \
-		--precomputed_moves evaluation/eval_datasets/lichess13_100g_180m.pkl \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint $(CHECKPOINT) \
-		--precomputed_moves evaluation/eval_datasets/random100games.pkl \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
-
-
 full_benchmark: generate_precompute_random_benchmark_games benchmark_model
-
-
-show_dic:
-	python evaluation/show_dictionary.py
-
-benchmark_set:
-##2K
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint evaluation/eval_models/random16M_8layer_2K.pth \
-		--precomputed_moves evaluation/eval_datasets/lichess13_100g_180m.pkl \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
-##12K
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint evaluation/eval_models/random16M_8layer_12K.pth \
-		--precomputed_moves evaluation/eval_datasets/lichess13_100g_180m.pkl \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
-
-##23K
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint evaluation/eval_models/lichess9gb_8layer_23K.pth \
-		--precomputed_moves evaluation/eval_datasets/lichess13_100g_180m.pkl \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
-
-##22K
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint evaluation/eval_models/random16M_8layer_22K.pth \
-		--precomputed_moves evaluation/eval_datasets/lichess13_100g_180m.pkl \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
-	$(PYTHON) evaluation/$(BENCHMARK1) \
-		eval \
-		--checkpoint evaluation/eval_models/random16M_8layer_22K.pth \
-		--precomputed_moves evaluation/eval_datasets/random100games.pkl \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
-
 
 remote_benchmark_model:
 	sky jobs launch -c benchmarkCluster remote/benchmark.yaml
-
-
 	
 hfdataset:
 	sky jobs launch -c boardCluster remote/hfExport.yaml
