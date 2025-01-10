@@ -1,4 +1,4 @@
-name: random_train
+name: random_train_karvhyp
 
 resources:
   # Use spot instances to save cost.
@@ -35,4 +35,4 @@ setup: |
 
 run: |
   set -e
-  python3 train.py config/random10gb.py
+  python3 train.py config/random_karvhyp.py

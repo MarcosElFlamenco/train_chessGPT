@@ -52,7 +52,7 @@ cast:
 LICHESS_CSV_FILE := lichess_hf_dataset/lichess_9gb.csv
 LICHESS_BLOCKS_FILE := lichess_hf_dataset/lichess_9gb_blocks.csv
 
-BASE := smartCutRandom2
+BASE := smartCutRandom6gb
 CSV_FILE := random_dataset/$(BASE).csv
 BLOCKS_FILE := random_dataset/$(BASE)_blocks.csv
 
@@ -72,6 +72,19 @@ tokens:
 		--blocks_file $(BLOCKS_FILE) \
 		--bin_dir $(BIN_DIR) \
 		--test_size $(TEST_SIZE)
+
+lichess_tokens:
+	python3 tokenizeData.py \
+		--blocks_file lichess_hf_dataset/lichess_6gb_blocks.csv  \
+		--bin_dir $(BIN_DIR) \
+		--bin_category 6gb \
+		--test_size $(TEST_SIZE)
+	
+lichess_blocks:
+	python3 filter/csv_to_blocks.py \
+		--input_file lichess_hf_dataset/lichess_6gb.csv \
+		--input_length $(INPUT_LENGTH) \
+
 
 
 streamline: truncate blocks tokens

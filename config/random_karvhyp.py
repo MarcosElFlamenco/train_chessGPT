@@ -34,7 +34,8 @@ grad_clip = 1.0
 
 compile = True
 
-data_type = '10gb'
+data_type = 'random6gb'
 checkpoint_key_prefix = f"random_karvhyp"
 bucket_name = 'chess-gpt-checkpoints-600'
-verbose = False
+data_bucket_name = "bins-bucket-craft"
+verbose = True

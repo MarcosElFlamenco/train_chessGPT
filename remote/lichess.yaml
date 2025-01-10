@@ -1,4 +1,4 @@
-name: lichess_train
+name: lichess_train_karvhyp
 
 resources:
   # Use spot instances to save cost.
@@ -35,5 +35,4 @@ setup: |
 
 run: |
   set -e
-
-  python3 train.py config/lichess9gb.py
+  python3 train.py config/lichess_karvhyp.py
