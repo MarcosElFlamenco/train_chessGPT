@@ -53,7 +53,12 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
                         num_mistakes += num_mistakes_game
 
                     error_freq = num_mistakes / total_moves_tested_for
-                    iteration_vals.append(int(iteration[:-1]))  # Remove 'K'
+                    iteration_val =  30
+                    try:
+                        iteration_val = int(iteration[:-1])
+                    except Exception as e:
+                        print(f'we got an exception {e}')
+                    iteration_vals.append(iteration_val)
                     error_freqs.append(error_freq)
 
                 if iteration_vals:
@@ -65,6 +70,13 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
                         line_styles[dataset],
                         color=color,
                         linewidth=2
+                    )
+                    plt.scatter(
+                        iteration_vals,
+                        error_freqs,
+                        color=color,
+                        edgecolor='black',  # Optional, adds an outline to the points
+                        zorder=5  # Ensures the points are above the line
                     )
 
     # Add a simplified legend

@@ -108,19 +108,23 @@ BENCHMARK := benchmark_full_info.py
 RESULTS_FILE := evaluation/benchmark_results.csv
 
 
-Mg := evaluation/eval_models/lichess9gb_vocab32_280K.pth
-Mh := evaluation/eval_models/big_random16M_vocab32_250K.pth
-Mj := evaluation/eval_models/lichess9gb_vocab32_250K.pth
-Mi := evaluation/eval_models/big_random16M_vocab32_300K.pth
-
-
-Mk := evaluation/eval_models/lichess9gb_vocab32_190K.pth
-Ml := evaluation/eval_models/lichess9gb_vocab32_225K.pth
-Mn := evaluation/eval_models/big_random16M_vocab32_280K.pth
-
 ##new benchmarks
 Ma = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_30K.pth
 Mb = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_40K.pth
+Mc = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_50K.pth
+Md = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_60K.pth
+Me = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_70K.pth
+Mf = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_80K.pth
+Mg = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_90K.pth
+Mh = /home/oscar/train_ChessGPT/evaluation/eval_models/small_random10gb_vocab32_40K.pth
+
+
+Mi = /home/oscar/train_ChessGPT/evaluation/eval_models/gb_lichess9gb_vocab32_30K.pth
+Mj = /home/oscar/train_ChessGPT/evaluation/eval_models/gb_lichess9gb_vocab32_40K.pth
+
+Mkarvonen = /home/oscar/train_ChessGPT/evaluation/eval_models/lichess_8layers_ckpt_no_optimizer.pt
+
+
 
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
@@ -128,7 +132,7 @@ D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 benchmark_models:
 	$(PYTHON) evaluation/$(BENCHMARK) \
 		eval \
-		--checkpoints $(Ma) $(Mb) \
+		--checkpoints $(Mg) \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \

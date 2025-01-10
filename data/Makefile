@@ -1,9 +1,6 @@
 PYTHON := python3
 HF_REPO := MarcosElFlamenco/chess_games
 
-BASE := random_small
-CSV_FILE := random_dataset/$(BASE).csv
-BLOCKS_FILE := random_dataset/$(BASE)_blocks.csv
 
 PGN_DIR := twic_extracted_pgn
 S3_BUCKET := go-bucket-craft
@@ -55,6 +52,15 @@ cast:
 LICHESS_CSV_FILE := lichess_hf_dataset/lichess_9gb.csv
 LICHESS_BLOCKS_FILE := lichess_hf_dataset/lichess_9gb_blocks.csv
 
+BASE := smartCutRandom2
+CSV_FILE := random_dataset/$(BASE).csv
+BLOCKS_FILE := random_dataset/$(BASE)_blocks.csv
+
+truncate:
+	python filter/truncate.py \
+		--output_file $(CSV_FILE) \
+		--std_dev 50
+
 blocks:
 	python3 filter/csv_to_blocks.py \
 		--input_file $(CSV_FILE) \
@@ -66,6 +72,9 @@ tokens:
 		--blocks_file $(BLOCKS_FILE) \
 		--bin_dir $(BIN_DIR) \
 		--test_size $(TEST_SIZE)
+
+
+streamline: truncate blocks tokens
 
 
 block_zip:

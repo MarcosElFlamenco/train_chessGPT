@@ -122,7 +122,7 @@ def evaluate_models(model_names, args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate LLM against Stockfish to compute Elo.")
     parser.add_argument('--checkpoint', type=str, help='Path to model checkpoint.')
-    parser.add_argument('--data_dir', type=str, required=True, help='Directory with meta.pkl.')
+    parser.add_argument('--data_dir', type=str, default='data',required=True, help='Directory with meta.pkl.')
     parser.add_argument('--device', type=str, default='cuda', help='Device to run the model on.')
     parser.add_argument('--num_games', type=int, default=100, help='Number of games to play.')
     parser.add_argument('--time_per_move', type=float, default=0.1, help='Time per move for Stockfish (seconds).')
