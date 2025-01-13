@@ -13,6 +13,8 @@
 *.pgn
 *.part
 
+elo_quick_save.json
+
 models
 input.txt
 chessEnv/
