@@ -312,7 +312,7 @@ def run_validation_single_model(args):
     print(f"Vocab Size: {vocab_size}")
 
     # Load the model
-    model = load_model(args.checkpoint, args.device)
+    model = load_model(os.path.join(args.models_directory,args.checkpoint), args.device)
     print(f"Model loaded successfully from {args.checkpoint}.\n")
 
     # Load precomputed legal moves
@@ -479,7 +479,37 @@ def add_result(test_results, model_name, dataset_name, game_dics):
         test_results[model_name][model_iters] = {}
     test_results[model_name][model_iters][dataset] = game_dics
 
+def get_checkpoints(folder: str, prefixes: list) -> list:
+    """
+    Retrieves all checkpoint files in the folder with the specified prefixes of form `prefix_{some int}K.pth`.
 
+    Args:
+        folder (str): The directory to search for checkpoint files.
+        prefixes (list): A list of prefixes to match (e.g., ["lichess_karvhyp", "another_prefix"]).
+
+    Returns:
+        list: A sorted list of matching checkpoint file names.
+    """
+    # Create regex patterns for all prefixes
+    patterns = [re.compile(rf"^{re.escape(prefix)}_\d+K\.pth$") for prefix in prefixes]
+
+    try:
+        # List all files in the folder
+        files = os.listdir(folder)
+        
+        # Filter files that match any pattern
+        checkpoints = [file for file in files if any(pattern.match(file) for pattern in patterns)]
+        
+        # Sort the list by the integer value before 'K'
+        checkpoints.sort(key=lambda x: int(re.search(r"_(\d+)K", x).group(1)))
+
+        return checkpoints
+    except FileNotFoundError:
+        print(f"Error: The folder '{folder}' does not exist.")
+        return []
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
 
 def precompute_legal_moves_wrapper(args):
     """
@@ -505,7 +535,9 @@ def main():
 
     # Subparser for evaluation mode
     eval_parser = subparsers.add_parser('eval', help='Evaluate model using precomputed legal moves')
-    eval_parser.add_argument('--checkpoints', type=str, required=True, nargs= '+', help='Path to the model checkpoint (e.g., checkpoint.pth)')
+    eval_parser.add_argument('--checkpoints', type=str, required=True, nargs= '*', help='Path to the model checkpoint (e.g., checkpoint.pth)')
+    eval_parser.add_argument('--models_directory', type=str, required=True, help='Path to the model checkpoint (e.g., checkpoint.pth)')
+    eval_parser.add_argument('--models', type=str, required=True, nargs= '*', help='Path to the model checkpoint (e.g., checkpoint.pth)')
     eval_parser.add_argument('--datasets', type=str, required=True, nargs = '+',help='File containing precomputed legal moves')
     eval_parser.add_argument('--data_dir', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
     eval_parser.add_argument('--results_file', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
@@ -524,7 +556,13 @@ def main():
     if args.mode == 'precompute':
         precompute_legal_moves_wrapper(args)
     elif args.mode == 'eval':
-        for checkpoint in args.checkpoints:
+        all 
+        if args.models:
+            all_model_checkpoints = get_checkpoints(args.models_directory,args.models)
+        else:
+            all_model_checkpoints = []
+        all_model_checkpoints = all_model_checkpoints + args.checkpoints
+        for checkpoint in all_model_checkpoints:
             for dataset in args.datasets:
                 args.checkpoint = checkpoint
                 args.dataset = dataset

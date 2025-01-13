@@ -132,7 +132,9 @@ D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 benchmark_models:
 	$(PYTHON) evaluation/$(BENCHMARK) \
 		eval \
-		--checkpoints $(Mg) \
+		--checkpoints \
+		--models_directory evaluation/eval_models \
+		--models lichess_karvhyp \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
