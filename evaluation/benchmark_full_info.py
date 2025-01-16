@@ -290,7 +290,7 @@ def run_validation_single_model(args):
     Args:
         args: Parsed command-line arguments.
     """
-    storage_file = 'evaluation/test_results.json'
+    storage_file = 'evaluation/generation_results.json'
     import json
     with open(storage_file, "r") as f:
         test_results = json.load(f)

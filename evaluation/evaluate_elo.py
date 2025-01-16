@@ -154,15 +154,15 @@ def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_r
     while retries < max_retries:
         generated_move = generate_next_move(model, prompt_pgn, stoi, itos, device,verbose=verbose)
         if generated_move == None:
-            print(f"When trying to generate move number {idx}, we exceded the size limtis of the model") 
-            retries +=1
+            if verbose:
+                print(f"When trying to generate move number {idx}, we exceded the size limits of the model") 
+            return "oversize"
         else:
             try:
                 board.push_san(generated_move)
                 if verbose:
                     print(f'Valid move generated, now pushing {generated_move}')
                 return generated_move
-                break
             except ValueError:
                 if verbose:
                     print(f"On move {idx}, model generated the move {generated_move}, which is invalid!")
@@ -170,10 +170,10 @@ def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_r
     return move
 
 
-def play_game_against_stockfish(model, stoi, itos, device, stockfish_path, time_per_move, max_retries,color,verbose):
+def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_path, time_per_move, max_retries,color,verbose):
     if verbose:
         print("------------------------- \n starting game against stockfish \n -------------------------")
-    engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+
     board = chess.Board()
     prompt_pgn = ';'
     move_number = 0
@@ -194,9 +194,11 @@ def play_game_against_stockfish(model, stoi, itos, device, stockfish_path, time_
             ##gpt turn
             gpt_move = chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries, move_number,verbose) 
             if gpt_move == None:
-                engine.quit()
                 print(f"Game lost for inability to generate valid move (max retries: {max_retries})")
-                return "loss_by_no_gen",move_number
+                return "loss_invalid_gen",move_number
+            elif gpt_move == "oversize":
+                print(f"Game lost because of context size")
+                return "loss_context_size",move_number
             else:
                 pgn_move = gpt_move
         else:
@@ -209,7 +211,6 @@ def play_game_against_stockfish(model, stoi, itos, device, stockfish_path, time_
             pgn_move = pgn_stockfish_move
 
         prompt_pgn += pgn_move + ' '
-    engine.quit()
 
     if (move_number % 2 == 0 and color == "black") or (move_number % 2 == 1 and color == "white"):
         return 'win', move_number
@@ -218,8 +219,11 @@ def play_game_against_stockfish(model, stoi, itos, device, stockfish_path, time_
 
 
 def update_elo(elo_a, elo_b, result, k=32):
+    if result == "loss_context_size":
+        return elo_a
+    ##we count context size as not a valid game
     prob_a = 1 / (1 + 10 ** ((elo_b - elo_a) / 400))
-    score_a = 1 if result == "win" else 0 if result == "loss" else 0.5
+    score_a = 1 if result == "win" else 0 if ((result == "loss") or (result == "loss_invalid_gen")) else 0.5
     return elo_a + k * (score_a - prob_a)
 
 def run_evaluation(args):
@@ -249,7 +253,8 @@ def run_evaluation(args):
     ELO_RESULTS_FILE = 'evaluation/elo_results.json'
     # Where we store partial results (quick save)
     QUICK_SAVE_FILE = 'evaluation/elo_quick_save.json'
-    no_gen_counter = 0
+    invalid_gen_counter = 0
+    context_size_counter = 0
     # Load model metadata
     vocab_size, stoi, itos = load_meta(args.data_dir)
     
@@ -286,7 +291,7 @@ def run_evaluation(args):
             elo = existing_entry["final_elo"]
             start_game_idx = completed_games
             results_list = existing_entry["games"]
-            no_gen_counter = existing_entry['no_gen_counter']
+            invalid_gen_counter = existing_entry['invalid_gen_counter']
     else:
         # Start from scratch
         print(f"Starting new evaluation for {model_name} vs {stockfish_name}.")
@@ -317,6 +322,26 @@ def run_evaluation(args):
     # The total number of games we want to evaluate
     total_games = args.evaluation_games
 
+    # Start Stockfish engine
+    engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+        # Set desired Elo rating
+    desired_elo = args.desired_elo # Example: 1200 Elo
+    max_elo = 3500      # Adjust based on your Stockfish version
+
+    # Ensure the desired Elo is within the valid range
+    if desired_elo < 0 or desired_elo > max_elo:
+        raise ValueError(f"Elo rating must be between 0 and {max_elo}")
+
+    # Configure UCI options
+    engine.configure({
+        "UCI_LimitStrength": True,  # Enable strength limitation
+        "UCI_Elo": desired_elo      # Set the Elo rating
+    })
+
+    # Check if the configuration was applied successfully
+    print("Stockfish is now configured with the desired Elo.")
+
+
     # Now proceed with the evaluation from `start_game_idx+1` to `total_games`.
     for game_idx in range(start_game_idx, total_games):
         # Here you decide color. For simplicity, let's alternate color:
@@ -333,18 +358,21 @@ def run_evaluation(args):
         # For demonstration, let's mock them:
         ##TODO input color to the game and have it play the correct color
         result, num_moves = play_game_against_stockfish(
-            model, stoi, itos, args.device, 
+            model, engine, stoi, itos, args.device, 
             stockfish_path, args.time_per_move, 
             args.max_retries, color, args.verbose
         )
-        if result == "loss_by_no_gen":
-            no_gen_counte += 1
+        if result == "loss_invalid_gen":
+            invalid_gen_counter += 1
+        elif result == "loss_context_size":
+            context_size_counter += 1
+
 
         # Update ELO
         #   stockfish_elo is presumably some baseline or same as ours, or might be separate
         #   In your snippet, you used "elo = update_elo(elo, stockfish_elo, result)"
         ##TODO check this
-        stockfish_elo = 1200
+        stockfish_elo = 1320
         elo = update_elo(elo, stockfish_elo, result)
         print(f"Game {game_idx} finished after {num_moves} moves, result: {result}, updated elo is {elo}")
 
@@ -362,7 +390,8 @@ def run_evaluation(args):
         elo_results[entry_key]["games"] = results_list
         elo_results[entry_key]["final_elo"] = elo
         elo_results[entry_key]["num_games_evaluated"] = game_idx + 1
-        elo_results[entry_key]["no_gen_counter"] = no_gen_counter
+        elo_results[entry_key]["invalid_gen_counter"] = invalid_gen_counter
+        elo_results[entry_key]["context_size_counter"] = context_size_counter 
 
         # Quick save every 20 games (and if it’s not the final game)
         if (game_idx + 1) % 20 == 0 and (game_idx + 1) < total_games:
@@ -383,7 +412,8 @@ def run_evaluation(args):
         del quick_save[entry_key]
         save_json_file(QUICK_SAVE_FILE, quick_save)
 
-    print(f"Evaluation complete for {model_name} vs {stockfish_name}. Final ELO: {elo}.")
+    print(f"Evaluation complete for {model_name} vs {stockfish_name}. Over {game_idx+1} games, final ELO: {elo}. \n Invalid generate counter {invalid_gen_counter}, over context counter {context_size_counter}")
+    engine.quit()
     return elo
 
 
@@ -403,6 +433,7 @@ if __name__ == "__main__":
     parser.add_argument('--time_per_move', type=float, default=0.1, help='Time per move for Stockfish (seconds).')
     parser.add_argument('--max_retries', type=int, default=3, help='Max retries for invalid LLM moves.')
     parser.add_argument('--evaluation_games', type=int, default=3, help='Max retries for invalid LLM moves.')
+    parser.add_argument('--desired_elo', type=int, default=3, help='Max retries for invalid LLM moves.')
     parser.add_argument('--save_interval', type=int, default=10, help='Save progress every N games.')
     parser.add_argument('--save_file', type=str, default='results.pkl', help='File to save progress.')
     parser.add_argument('--models_dir', type=str, help='Directory with model checkpoints.')
