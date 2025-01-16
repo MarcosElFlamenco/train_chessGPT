@@ -5,7 +5,7 @@ eval_iters = 1
 # when running on multiple GPUs. TODO: investigate
 log_interval = 1  # don't print too too often
 
-always_save_checkpoint = True
+always_save_checkpoint = False
 
 wandb_log = False
 mlflow_log = False
@@ -16,7 +16,7 @@ local_bypass = True
 
 dataset = "lichess_hf_dataset"
 gradient_accumulation_steps = 1
-batch_size = 1
+batch_size = 10
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
 init_from = 'scratch'
 data_type = '1M'
@@ -32,7 +32,8 @@ max_iters = 600000
 lr_decay_iters = max_iters  # make equal to max_iters usually
 min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
+grad_clip = 1.0
 
 warmup_iters = 0  # not super necessary potentially
 compile = False
-verbose = False
+verbose = True

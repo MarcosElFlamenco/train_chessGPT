@@ -382,9 +382,8 @@ while True:
                 if local_bypass:
                     print("upload bypassed because local")
                 else:
-                    upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
-    if eval_only and iter_num == 0:
-        break
+                    if eval_only and iter_num == 0:
+                        break
 
     # forward backward update, with optional gradient accumulation to simulate larger batch size
     # and using the GradScaler if data type is float16
@@ -413,6 +412,7 @@ while True:
         total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         if verbose:
             new_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 200)
+            print(f"The old gradient norm was {total_norm} now it's {new_norm}")
         grad_norms.append(total_norm)
     # step the optimizer and scaler if training in fp16
     scaler.step(optimizer)

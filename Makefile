@@ -59,7 +59,8 @@ elo_evaluation:
 		--checkpoint karvmodel_600K \
 		--time_per_move 0.001 \
 		--max_retries 3 \
-		--evaluation_games 200 \
+		--evaluation_games 1000 \
+		--desired_elo 1320 \
 		--save_file results.pkl \
 		--save_dir elo_results \
 		--stockfish_path ~/Downloads/stockfish-ubuntu-x86-64-avx2/stockfish/stockfish-ubuntu-x86-64-avx2 \
