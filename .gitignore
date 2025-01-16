@@ -12,7 +12,9 @@
 *.bin
 *.pgn
 *.part
+*.pth
 
+output.txt
 elo_quick_save.json
 
 models
