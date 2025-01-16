@@ -144,6 +144,7 @@ else:
     ddp_world_size = 1
 tokens_per_iter = gradient_accumulation_steps * ddp_world_size * batch_size * block_size
 print(f"tokens per iteration will be: {tokens_per_iter:,}")
+print(f"the math is {gradient_accumulation_steps}, {ddp_world_size}, {batch_size}, {block_size}")
 
 if master_process:
     os.makedirs(out_dir, exist_ok=True)
@@ -385,8 +386,9 @@ while True:
                 if local_bypass:
                     print("upload bypassed because local")
                 else:
-                    if eval_only and iter_num == 0:
-                        break
+                    upload_checkpoint(local_file_path, bucket_name, checkpoint_key)
+        if eval_only and iter_num == 0:
+            break
 
     # forward backward update, with optional gradient accumulation to simulate larger batch size
     # and using the GradScaler if data type is float16
