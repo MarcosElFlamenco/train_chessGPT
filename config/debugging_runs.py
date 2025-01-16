@@ -1,19 +1,19 @@
-out_dir = "chess_saver"
-eval_interval = 2000 ##this is too large
+out_dir = "chess_checkpoints"
+eval_interval = 5000 ##this is too large
 eval_iters = 100
 # I'm not sure what's going on, but when log_interval == 100, the time per iter is inaccurate and much longer than it should be
 # when running on multiple GPUs. TODO: investigate
-log_interval = 100  # don't print too too often
+log_interval = 1000  # don't print too too often
 
 always_save_checkpoint = True
 
-wandb_log = True
+wandb_log = True 
 mlflow_log = False 
-wandb_project = "chess-gpt-random-small-vocab32"
-wandb_run_name = "8layer_lichess"
+wandb_project = "debugging-chess-random"
+wandb_run_name = "RUN600"
 
-dataset = "big_random_generated"
-gradient_accumulation_steps = 4
+dataset = "1m"
+gradient_accumulation_steps = 1
 batch_size = 100
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
 init_from = 'resume'
@@ -32,10 +32,11 @@ min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 grad_clip = 1.0
 
-compile = True
+compile = False
 
-data_type = '10gb'
-checkpoint_key_prefix = f"8testing_small_random{data_type}_vocab32"
+data_type = '1M'
+checkpoint_key_prefix = f"1M_debugging_random_karvhyp"
 bucket_name = 'chess-gpt-checkpoints'
 data_bucket_name = "bins-bucket-craft"
 verbose = False
+debugging = True

@@ -35,4 +35,4 @@ setup: |
 
 run: |
   set -e
-  python3 train.py config/random10gb.py
+  python3 train.py config/debugging_runs.py

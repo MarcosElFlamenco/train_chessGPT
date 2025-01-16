@@ -81,6 +81,7 @@ bucket_name = 'chess-checkpoint-craft'
 
 verbose = False
 local_bypass = False
+debugging = True
 
 # system
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -169,6 +170,9 @@ def get_batch(split):
     ix = torch.randint(0, len(data) // (block_size + 1), (batch_size,)) * (block_size + 1)
     x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
+    if debugging: 
+        print(f'These are the first few lines of the batch inputs: \n {x[0][0:10]}... \n {x[1][0:10]}... \n {x[2][0:10]}...')
+        print(f'These are the first few lines of the batch targets: \n {y[0][0:10]}... \n {y[1][0:10]}... \n {y[2][0:10]}...')
     if device_type == 'cuda':
         # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
         x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
@@ -196,8 +200,8 @@ if os.path.exists(meta_path):
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
                 bias=bias, vocab_size=None, dropout=dropout) # start with model_args from command line
 
-if init_from == 'resume':
 
+if init_from == 'resume':
     # resume training from a checkpoint.
     ckpt_path = os.path.join(out_dir, 'ckpt.pt')
     checkpoint = load_checkpoint(bucket_name, checkpoint_key_prefix, device)
@@ -236,8 +240,7 @@ if init_from == 'resume':
         model.load_state_dict(state_dict)
         best_val_loss = checkpoint['best_val_loss']
         if flag:
-            print('we did in face remove unwanted prefix')
-
+            print('we did in fact remove unwanted prefix')
 if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")
@@ -266,9 +269,8 @@ model.to(device)
 # initialize a GradScaler. If enabled=False scaler is a no-op
 scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
 
-# optimizer
 optimizer = model.configure_optimizers(weight_decay, learning_rate, (beta1, beta2), device_type)
-if init_from == 'resume':
+if init_from == "resume":
     optimizer.load_state_dict(checkpoint['optimizer'])
 checkpoint = None # free up memory
 
@@ -277,6 +279,7 @@ if compile:
     print("compiling the model... (takes a ~minute)")
     unoptimized_model = model
     model = torch.compile(model) # requires PyTorch 2.0
+
 print(f"gradient will be clipped at {grad_clip}")
 # wrap model into DDP container
 if ddp:
@@ -375,9 +378,9 @@ while True:
                     'config': config,
                 }
                 print(f"saving checkpoint to {out_dir}")
-                local_file_path = os.path.join(out_dir, 'ckpt.pt')
-                torch.save(checkpoint, local_file_path)
                 checkpoint_key = checkpoint_key_prefix + f"_{iter_num//1000}" + "K.pth"
+                local_file_path = os.path.join(out_dir, checkpoint_key)
+                torch.save(checkpoint, local_file_path)
                 print(f'upload checkpoint {checkpoint_key} to bucket {bucket_name}')
                 if local_bypass:
                     print("upload bypassed because local")

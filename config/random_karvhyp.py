@@ -1,4 +1,4 @@
-out_dir = "chess_saver"
+out_dir = "chess_checkpoints"
 eval_interval = 5000 ##this is too large
 eval_iters = 100
 # I'm not sure what's going on, but when log_interval == 100, the time per iter is inaccurate and much longer than it should be
@@ -32,10 +32,10 @@ min_lr = 3e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 grad_clip = 1.0
 
-compile = True
+compile = False
 
 data_type = 'random6gb'
-checkpoint_key_prefix = f"random_karvhyp"
-bucket_name = 'chess-gpt-checkpoints-600'
+checkpoint_key_prefix = f"no_compile_random_karvhyp"
+bucket_name = 'chess-gpt-checkpoints'
 data_bucket_name = "bins-bucket-craft"
-verbose = True
+verbose = False
