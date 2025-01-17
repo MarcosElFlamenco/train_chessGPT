@@ -220,7 +220,6 @@ if init_from == 'resume':
         print(f"Rebuilding model from checkpoint {checkpoint}")
         for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size']:
             model_args[k] = checkpoint_model_args[k]
-            print(f"{k} : {checkpoint_model_args[k]}")
         # create the model
         gptconf = GPTConfig(**model_args)
         model = GPT(gptconf)
