@@ -420,7 +420,7 @@ while True:
         scaler.unscale_(optimizer)
         total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         if total_norm > 1.0 and debugging:
-            print(f"The gradient norm was {total_norm}, don't worry though, it got clipped")
+            print(f"The gradient norm was {total_norm}, it got clipped. iter {iter_num}")
         grad_norms.append(total_norm)
     # step the optimizer and scaler if training in fp16
     scaler.step(optimizer)

@@ -1,5 +1,5 @@
 out_dir = "chess_checkpoints"
-eval_interval = 500 ##this is too large
+eval_interval = 5000 ##this is too large
 eval_iters = 100
 # I'm not sure what's going on, but when log_interval == 100, the time per iter is inaccurate and much longer than it should be
 # when running on multiple GPUs. TODO: investigate
@@ -12,7 +12,7 @@ mlflow_log = False
 wandb_project = "debugging-chess-random"
 wandb_run_name = "RUN600"
 
-dataset = "1m"
+dataset = "6gb"
 gradient_accumulation_steps = 1
 batch_size = 100
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
