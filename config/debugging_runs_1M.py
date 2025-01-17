@@ -34,8 +34,8 @@ grad_clip = 1.0
 
 compile = False
 
-data_type = 'random6gb'
-checkpoint_key_prefix = f"random6gb_debugging_random_karvhyp"
+data_type = '1M'
+checkpoint_key_prefix = f"1M_debugging_random_karvhyp"
 bucket_name = 'chess-gpt-checkpoint-debug'
 data_bucket_name = "bins-bucket-craft"
 verbose = False

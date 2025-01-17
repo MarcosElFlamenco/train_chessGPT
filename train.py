@@ -172,8 +172,12 @@ def get_batch(split):
     x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
     if debugging: 
-        print(f'These are the first few lines of the batch inputs: \n {x[0][0:10]}... \n {x[1][0:10]}... \n {x[2][0:10]}...')
-        print(f'These are the first few lines of the batch targets: \n {y[0][0:10]}... \n {y[1][0:10]}... \n {y[2][0:10]}...')
+        if x[0][0].item() == 15 and x[1][0].item() == 15 and x[2][0] == 15:
+            pass
+        else:
+            print("problem detected with input lines")
+            print(f'These are the first few lines of the batch inputs: \n {x[0][0:10]}... \n {x[1][0:10]}... \n {x[2][0:10]}...')
+            print(f'These are the first few lines of the batch targets: \n {y[0][0:10]}... \n {y[1][0:10]}... \n {y[2][0:10]}...')
     if device_type == 'cuda':
         # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
         x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
@@ -415,9 +419,8 @@ while True:
     if grad_clip != 0.0:
         scaler.unscale_(optimizer)
         total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-        if verbose:
-            new_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 200)
-            print(f"The old gradient norm was {total_norm} now it's {new_norm}")
+        if total_norm > 1.0 and debugging:
+            print(f"The gradient norm was {total_norm}, don't worry though, it got clipped")
         grad_norms.append(total_norm)
     # step the optimizer and scaler if training in fp16
     scaler.step(optimizer)

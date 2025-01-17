@@ -1,0 +1,38 @@
+name: random_train_karvhyp
+
+resources:
+  # Use spot instances to save cost.
+  accelerators: A10G
+  region: eu-west-2
+  memory: 32+ 
+  use_spot: true
+
+
+# To make this example work, please run the following command:
+workdir: ~/train_ChessGPT
+
+
+file_mounts:
+  /checkpoint:
+    source: s3://chess-data-bucket-craft
+    store: s3
+    mode: MOUNT
+  /sourcecsv:
+    source: s3://chess-gpt-checkpoints
+    store: s3
+    mode: MOUNT
+
+
+
+setup: |
+  # Fill in your wandb key: copy from https://wandb.ai/authorize
+  # Alternatively, you can use `--env WANDB_API_KEY=$WANDB_API_KEY`
+  # to pass the key in the command line, during `sky spot launch`.
+
+  echo export WANDB_API_KEY=[YOUR-WANDB-API-KEY] >> ~/.bashrc
+  set -e .
+  pip install -r remote/sky_req.txt
+
+run: |
+  set -e
+  python3 train.py config/debugging_runs_1M.py

@@ -40,8 +40,12 @@ remote_controller_train_random:
 remote_nocontroller_train_lichess:
 	sky launch -c boardLichessCluster --use-spot --env WANDB_API_KEY remote/$(LICHESS_YAML)
 
-remote_nocontroller_train_random_test:
-	sky launch -c boardDebuggingRandomCluster --use-spot --env WANDB_API_KEY remote/$(RANDOM_YAML)
+debug_remote_nocontroller_train_random:
+	sky launch -c debugCluster --use-spot --env WANDB_API_KEY remote/$(RANDOM_YAML)
+
+control_remote_nocontroller_train_random:
+	sky launch -c debugCluster2 --use-spot --env WANDB_API_KEY remote/random2.yaml
+
 
 remote_nocontroller_train_random:
 	sky launch -c boardNoCompileRandomCluster --use-spot --env WANDB_API_KEY remote/$(RANDOM_YAML)
