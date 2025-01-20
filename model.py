@@ -167,7 +167,7 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None):
+    def forward(self, idx, targets=None, debugging=False):
         device = idx.device
         b, t = idx.size()
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
@@ -181,10 +181,49 @@ class GPT(nn.Module):
             x = block(x)
         x = self.transformer.ln_f(x)
 
+
         if targets is not None:
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+            if debugging:
+                # compute the loss without reduction
+                loss_per_token = F.cross_entropy(
+                    logits.view(-1, logits.size(-1)), 
+                    targets.view(-1), 
+                    ignore_index=-1, 
+                    reduction='none'
+                )
+
+                # reshape loss to match the batch size
+                loss_per_token = loss_per_token.view(logits.size(0), -1)  # (batch_size, input_length)
+
+                # sum the loss over the sequence length for each batch element
+                loss_per_batch = loss_per_token.mean(dim=1)  # (batch_size,)
+
+                # find the maximum loss in the batch and its index
+                max_loss, max_index = loss_per_batch.max(dim=0)
+
+                # log the largest loss and its index
+
+                torch.set_printoptions(edgeitems=15,linewidth=1000)
+                print(f"largest loss: {max_loss.item()}, batch index: {max_index.item()}")
+                print(f"Predic: {logits[max_index].argmax(-1)}")
+                print(f"target: {targets[max_index]}")
+
+                # Compute softmax probabilities for the problematic sample
+                probs = F.softmax(logits[max_index], dim=-1)  # Softmax over the vocab dimension
+
+                # Gather the probabilities for the predicted tokens
+                argmax_indices = logits[max_index].argmax(dim=-1)
+                predicted_probs = probs[torch.arange(probs.size(0)), argmax_indices]
+
+                torch.set_printoptions(precision=2)  # Set precision to 4 decimal places
+                print(f"Probab: {predicted_probs}")
+
+                # aggregate loss for backpropagation
+                loss = loss_per_batch.mean()
+            else:
+                loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
 #            logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim

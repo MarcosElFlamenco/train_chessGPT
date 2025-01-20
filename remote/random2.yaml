@@ -35,4 +35,4 @@ setup: |
 
 run: |
   set -e
-  python3 train.py config/debugging_runs_1M.py
+  python3 train.py config/debugging_runs_karvonen.py

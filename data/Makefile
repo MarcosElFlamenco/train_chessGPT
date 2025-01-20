@@ -52,7 +52,7 @@ cast:
 LICHESS_CSV_FILE := lichess_hf_dataset/lichess_9gb.csv
 LICHESS_BLOCKS_FILE := lichess_hf_dataset/lichess_9gb_blocks.csv
 
-BASE := smartCutRandom6gb
+BASE := randomNS
 CSV_FILE := random_dataset/$(BASE).csv
 BLOCKS_FILE := random_dataset/$(BASE)_blocks.csv
 

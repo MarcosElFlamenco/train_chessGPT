@@ -37,3 +37,4 @@ grad_clip = 1.0
 warmup_iters = 0  # not super necessary potentially
 compile = False
 verbose = True
+debugging = True

@@ -94,7 +94,21 @@ exec(open('configurator.py').read()) # overrides from command line or config fil
 config = {k: globals()[k] for k in config_keys} # will be useful for logging
 # -----------------------------------------------------------------------------
 #s3 settings
-print(f"decay lr {decay_lr}")
+
+
+##random seeding
+
+# Set the seed
+seed = 42
+torch.manual_seed(seed)
+# Set the seed for CUDA (if using GPUs)
+torch.cuda.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
+
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+np.random.seed(seed)
 
 data_bucket_name = "chess-data-bucket-craft"
 data_dir = os.path.join('data')
@@ -217,7 +231,6 @@ if init_from == 'resume':
         checkpoint_model_args = checkpoint['model_args']
         # force these config attributes to be equal otherwise we can't even resume training
         # the rest of the attributes (e.g. dropout) can stay as desired from command line
-        print(f"Rebuilding model from checkpoint {checkpoint}")
         for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size']:
             model_args[k] = checkpoint_model_args[k]
         # create the model
@@ -403,15 +416,10 @@ while True:
             # looking at the source of that context manager, it just toggles this variable
             model.require_backward_grad_sync = (micro_step == gradient_accumulation_steps - 1)
         with ctx:
-            logits, loss = model(X, Y)
+            logits, loss = model(X, Y,debugging=debugging)
             loss = loss / gradient_accumulation_steps # scale the loss to account for gradient accumulation
         # immediately async prefetch next batch while model is doing the forward pass on the GPU
         X, Y = get_batch('train')
-        #if iter_num < 10:
-        #     print("Batch")
-        #     print(X)
-        #     print("y")
-        #     print(Y)
         # backward pass, with gradient scaling if training in fp16
         scaler.scale(loss).backward()
     # clip the gradient
