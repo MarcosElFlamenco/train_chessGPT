@@ -3,7 +3,7 @@ import random
 import argparse
 import numpy as np
 
-def truncate_transcripts(input_file, output_file, mean_length=463.08, std_dev=50):
+def truncate_transcripts(input_file, output_file, mean_length=459.08, std_dev=50):
     # Open the input CSV file and output CSV file
     with open(input_file, 'r', newline='', encoding='utf-8') as infile, \
          open(output_file, 'w', newline='', encoding='utf-8') as outfile:

@@ -9,10 +9,10 @@ always_save_checkpoint = True
 
 wandb_log = True 
 mlflow_log = False 
-wandb_project = "karvhyp-chess-random-NS"
+wandb_project = "debugging-chess-random"
 wandb_run_name = "RUN600"
 
-dataset = "smart_random_NS"
+dataset = "6gb"
 gradient_accumulation_steps = 1
 batch_size = 100
 block_size = 1023  # context of up to 1023 tokens (because dataset block size is 1024)
@@ -34,9 +34,9 @@ grad_clip = 1.0
 
 compile = False
 
-data_type = '8gbNS'
-checkpoint_key_prefix = f"random_karvhypNS"
-bucket_name = 'chess-gpt-checkpoints-600'
+data_type = 'random6gb'
+checkpoint_key_prefix = f"startat30_random6gb_debugging_random_karvhyp"
+bucket_name = 'chess-gpt-checkpoint-debug'
 data_bucket_name = "bins-bucket-craft"
 verbose = False
-debugging = False
+debugging = True
