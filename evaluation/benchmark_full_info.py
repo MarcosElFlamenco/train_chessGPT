@@ -302,7 +302,6 @@ def run_validation_single_model(args):
 
     dataset = (args.dataset).split('/')[-1].split('.')[0]
 
-
     if (model_name in test_results) and (model_iters in test_results[model_name]) and (dataset in test_results[model_name][model_iters]):
         print(f"The model {model_name} after {model_iters} iters has already been evaluated on {dataset} dataset")
         return
@@ -312,7 +311,7 @@ def run_validation_single_model(args):
     print(f"Vocab Size: {vocab_size}")
 
     # Load the model
-    model = load_model(os.path.join(args.models_directory,args.checkpoint), args.device)
+    model = load_model(os.path.join(args.models_directory,model_name,args.checkpoint), args.device)
     print(f"Model loaded successfully from {args.checkpoint}.\n")
 
     # Load precomputed legal moves
@@ -491,22 +490,28 @@ def get_checkpoints(folder: str, prefixes: list) -> list:
         list: A sorted list of matching checkpoint file names.
     """
     # Create regex patterns for all prefixes
+
     patterns = [re.compile(rf"^{re.escape(prefix)}_\d+K\.pth$") for prefix in prefixes]
 
     try:
         # List all files in the folder
         files = os.listdir(folder)
-        
+
         # Filter files that match any pattern
-        checkpoints = [file for file in files if any(pattern.match(file) for pattern in patterns)]
-        
+
+        models_checkpoints = [dir for dir in files if dir in prefixes]
+        all_checkpoint = []
+        for model_checkpoints in models_checkpoints:
+            files = os.listdir(os.path.join(folder,model_checkpoints))
+            checkpoints = [file for file in files if any(pattern.match(file) for pattern in patterns)]
+            all_checkpoint += checkpoints
         # Sort the list by the integer value before 'K'
         checkpoints.sort(key=lambda x: int(re.search(r"_(\d+)K", x).group(1)))
 
-        return checkpoints
-    except FileNotFoundError:
-        print(f"Error: The folder '{folder}' does not exist.")
-        return []
+        return all_checkpoint
+    #except FileNotFoundError:
+    #    print(f"Error: The folder '{folder}' does not exist.")
+    #    return []
     except Exception as e:
         print(f"An error occurred: {e}")
         return []

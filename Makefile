@@ -7,8 +7,6 @@ LICHESS_YAML := lichess.yaml
 RANDOM_YAML := random.yaml
 
 
-
-
 local_train: $(TRAIN) 
 	$(PYTHON) $(TRAIN) \
 		config/$(CONFIG)
@@ -139,12 +137,13 @@ Mkarvonen = /home/oscar/train_ChessGPT/evaluation/eval_models/lichess_8layers_ck
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 
+MODELS := ../models
 benchmark_models:
 	$(PYTHON) evaluation/$(BENCHMARK) \
 		eval \
 		--checkpoints \
-		--models_directory evaluation/eval_models \
-		--models lichess_karvhyp \
+		--models_directory $(MODELS) \
+		--models lichess_karvhyp random_karvhypNS \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
