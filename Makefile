@@ -63,7 +63,7 @@ print_legal_moves:
 
 elo_evaluation:
 	python3 evaluation/evaluate_elo.py \
-		--checkpoint karvmodel_600K \
+		--checkpoint karvmodel/karvmodel_600K \
 		--time_per_move 0.001 \
 		--max_retries 3 \
 		--evaluation_games 1000 \
