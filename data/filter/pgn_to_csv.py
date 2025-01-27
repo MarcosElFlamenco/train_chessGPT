@@ -218,8 +218,8 @@ def filter_and_write_games(args):
                                 total_games += 1
                                 
                                 headers = game.headers
-                                white_elo = headers.get("WhiteElo", "0")
-                                black_elo = headers.get("BlackElo", "0")
+                                white_elo = headers.get("WhiteElo", "2500")
+                                black_elo = headers.get("BlackElo", "2500")
                                 
                                 try:
                                     white_elo = int(white_elo)

@@ -2,7 +2,9 @@ PYTHON := python3
 HF_REPO := MarcosElFlamenco/chess_games
 
 
-PGN_DIR := twic_extracted_pgn
+PGN_DIR := pgn_mentor_all
+CSV_FILE := pgn_mentor_all.csv
+
 S3_BUCKET := go-bucket-craft
 S3_DIR := dataset
 
@@ -15,6 +17,11 @@ TEST_SIZE := 0.01
 CURRENT_DATASET := twic_dataset
 
 BASE := 9gb
+scrap:
+	python download_and_upload/scrap.py \
+		--s 0.5 \
+		--o pgn_mentor_all \
+
 
 testing:
 	python3 test.py
@@ -36,12 +43,12 @@ download_twic:
 	
 csv:
 	python3 filter/pgn_to_csv.py \
-		$(CURRENT_DATASET)/$(PGN_DIR) \
-		$(CURRENT_DATASET)/$(CSV_FILE) \
-		--min_elo $(MIN_ELO) \
-		--max_elo $(MAX_ELO) \
-		--min_length $(MIN_LEN) \
-		--processed_files $(CURRENT_DATASET)/processed_files.txt
+		$(PGN_DIR) \ 
+		$(CSV_FILE) \
+		--min_elo 100 \
+		--max_elo 4000 \
+		--min_length 0 \
+		--processed_files processed_files_all.csv \
 		--debug
 
 cast:
