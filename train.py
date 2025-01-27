@@ -83,6 +83,8 @@ verbose = False
 local_bypass = False
 debugging = True
 
+is_random = False
+
 # system
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
@@ -96,19 +98,9 @@ config = {k: globals()[k] for k in config_keys} # will be useful for logging
 #s3 settings
 
 
-##random seeding
-
-# Set the seed
-seed = 42
-torch.manual_seed(seed)
-# Set the seed for CUDA (if using GPUs)
-torch.cuda.manual_seed(seed)
-torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
-
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-np.random.seed(seed)
 
 data_bucket_name = "chess-data-bucket-craft"
 data_dir = os.path.join('data')
@@ -178,11 +170,18 @@ train_data = np.memmap(train_path, dtype=np.uint8, mode='r')
 val_data = np.memmap(val_path, dtype=np.uint8, mode='r')
 
 
-def get_batch(split):
+def get_batch(split,is_random,global_iter_num):
     data = train_data if split == 'train' else val_data
     # ix = torch.randint(len(data) - block_size, (batch_size,))
     # Ensure the starting index is a multiple of block_size
-    ix = torch.randint(0, len(data) // (block_size + 1), (batch_size,)) * (block_size + 1)
+    if is_random:
+        ix = torch.randint(0, len(data) // (block_size + 1), (batch_size,)) * (block_size + 1)
+    else:
+        dataset_indices_max = (len(data) // (block_size + 1))
+        iter_pass = global_iter_num%dataset_indices_max
+        start = iter_pass * batch_size
+        end = (iter_pass + 1) * batch_size
+        ix = torch.arange(start = start, end=end, step = 1) * (block_size + 1)
     x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
     if debugging: 
@@ -310,7 +309,7 @@ def estimate_loss():
     for split in ['train', 'val']:
         losses = torch.zeros(eval_iters)
         for k in range(eval_iters):
-            X, Y = get_batch(split)
+            X, Y = get_batch(split,is_random=True,global_iter_num = 0)
             with ctx:
                 logits, loss = model(X, Y)
             losses[k] = loss.item()
@@ -348,7 +347,7 @@ if mlflow_log and master_process:
 
 #with mlflow.start_run(log_system_metrics=True):
 ## training loop
-X, Y = get_batch('train') # fetch the very first batch
+X, Y = get_batch('train',is_random=True,global_iter_num=iter_num) # fetch the very first batch
 t0 = time.time()
 local_iter_num = 0 # number of iterations in the lifetime of this process
 raw_model = model.module if ddp else model # unwrap DDP container if needed
@@ -419,7 +418,7 @@ while True:
             logits, loss = model(X, Y,debugging=debugging)
             loss = loss / gradient_accumulation_steps # scale the loss to account for gradient accumulation
         # immediately async prefetch next batch while model is doing the forward pass on the GPU
-        X, Y = get_batch('train')
+        X, Y = get_batch('train',is_random=True,global_iter_num=iter_num)
         # backward pass, with gradient scaling if training in fp16
         scaler.scale(loss).backward()
     # clip the gradient
