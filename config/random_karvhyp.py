@@ -9,7 +9,7 @@ always_save_checkpoint = True
 
 wandb_log = True 
 mlflow_log = False 
-wandb_project = "karvhyp-chess-random-NS"
+wandb_project = "karvhyp-chess-random-NSNR"
 wandb_run_name = "RUN600"
 
 dataset = "smart_random_NS"
@@ -35,7 +35,7 @@ grad_clip = 1.0
 compile = False
 
 data_type = '8gbNS'
-checkpoint_key_prefix = f"random_karvhypNS"
+checkpoint_key_prefix = f"random_karvhypNSNR"
 bucket_name = 'chess-gpt-checkpoints-600'
 data_bucket_name = "bins-bucket-craft"
 verbose = False

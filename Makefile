@@ -1,5 +1,5 @@
 PYTHON := python3
-TRAIN := train.py
+TRAIN := train2.py
 PREPARE := data/lichess_hf_dataset/prepare.py
 DATA_DIR := data
 CONFIG := local.py
@@ -106,8 +106,8 @@ generate_deterministic_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := toyBench
-GENERATE_NUM := 100
+BENCHMARK_GAMES := kasparov2128games
+GENERATE_NUM := 1000
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
 BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
@@ -143,7 +143,7 @@ benchmark_models:
 		eval \
 		--checkpoints \
 		--models_directory $(MODELS) \
-		--models lichess_karvhyp random_karvhypNS \
+		--models lichess_karvhyp random_karvhypNSNR \
 		--datasets $(D1) $(D2) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
@@ -153,17 +153,17 @@ plot:
 	$(PYTHON) evaluation/graphing_results.py
 
 precompute_benchmark:
-	$(PYTHON) evaluation/$(BENCHMARK1) \
+	$(PYTHON) evaluation/$(BENCHMARK) \
 		precompute \
 		--pgn_files $(BENCHMARK_PGN) \
 		--output_file $(BENCHMARK_PRECOMPUTE) \
 
 
 generate_benchmark_games:
-	$(PYTHON) data/lichess_hf_dataset/random/gen_random.py \
+	$(PYTHON) data/random_dataset/generate_random/gen_random.py \
 		--num_games $(GENERATE_NUM) \
 		--output_file $(BENCHMARK_CSV)
-	$(PYTHON) data/lichess_hf_dataset/random/toPGN.py \
+	$(PYTHON) data/random_dataset/generate_random/toPGN.py \
 		--csv_file $(BENCHMARK_CSV) \
 		--pgn_file $(BENCHMARK_PGN) \
 		--move_column transcript
@@ -188,7 +188,16 @@ clean_bins:
 	rm -f data/lichess_hf_dataset/binned/val*.bin
 
 test:
-	python test.py	
+	python test.py
+
+scrap_chess:
+	python data/automate.py \
+		--url https://www.chess.com/games \
+		--download_dir grandmaster_pgns \
+		--demo \
+		--demo_limit 3
+
+
 sand:
 	python sandbox.py
 
