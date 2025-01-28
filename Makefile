@@ -106,7 +106,7 @@ generate_deterministic_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := kasparov2128games
+BENCHMARK_GAMES := kasparov2129games
 GENERATE_NUM := 1000
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
@@ -137,6 +137,8 @@ Mkarvonen = /home/oscar/train_ChessGPT/evaluation/eval_models/lichess_8layers_ck
 D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 
+D3 := evaluation/eval_datasets/kasparov2128games.pkl
+
 MODELS := ../models
 benchmark_models:
 	$(PYTHON) evaluation/$(BENCHMARK) \
@@ -148,6 +150,18 @@ benchmark_models:
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
+
+new_benchmark_models:
+	$(PYTHON) evaluation/$(BENCHMARK) \
+		eval \
+		--checkpoints \
+		--models_directory $(MODELS) \
+		--models lichess_karvhyp random_karvhypNSNR \
+		--datasets $(D3) $(D2) \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+
 
 plot:
 	$(PYTHON) evaluation/graphing_results.py

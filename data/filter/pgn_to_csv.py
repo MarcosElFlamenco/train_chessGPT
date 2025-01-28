@@ -217,33 +217,33 @@ def filter_and_write_games(args):
                                 
                                 total_games += 1
                                 
-                                headers = game.headers
-                                white_elo = headers.get("WhiteElo", "2500")
-                                black_elo = headers.get("BlackElo", "2500")
+#                                headers = game.headers
+                                #white_elo = headers.get("WhiteElo", "2500")
+                                #black_elo = headers.get("BlackElo", "2500")
                                 
-                                try:
-                                    white_elo = int(white_elo)
-                                    black_elo = int(black_elo)
-                                except ValueError:
-                                    logging.debug(f"Non-integer ELO found in game {total_games} of file {file_path}. Skipping.")
-                                    skipped_elo += 1
-                                    continue
+                                #try:
+                                    #white_elo = int(white_elo)
+                                    #black_elo = int(black_elo)
+                                #except ValueError:
+                                    #logging.debug(f"Non-integer ELO found in game {total_games} of file {file_path}. Skipping.")
+                                    #skipped_elo += 1
+                                    #continue
                                 
-                                # Check ELO constraints
-                                if not (min_elo <= white_elo <= max_elo and min_elo <= black_elo <= max_elo):
-                                    logging.debug(f"Game {total_games} of file {file_path} skipped due to ELO constraints: WhiteElo={white_elo}, BlackElo={black_elo}")
-                                    skipped_elo += 1
-                                    continue
+                                ## Check ELO constraints
+                                #if not (min_elo <= white_elo <= max_elo and min_elo <= black_elo <= max_elo):
+                                    #logging.debug(f"Game {total_games} of file {file_path} skipped due to ELO constraints: WhiteElo={white_elo}, BlackElo={black_elo}")
+                                    #skipped_elo += 1
+                                    #continue
                                 
-                                # Extract and process moves
+                                ## Extract and process moves
                                 moves = extract_moves(game)
                                 
-                                # Measure game length
+                                ## Measure game length
                                 game_length = get_game_length(moves)
                                 
                                 logging.debug(f"Game {total_games} of file {file_path} length (plies): {game_length}")
                                 
-                                # Check game length
+                                ## Check game length
                                 if game_length < min_length:
                                     logging.debug(f"Game {total_games} of file {file_path} skipped due to insufficient length: {game_length} plies")
                                     skipped_length += 1

@@ -1,9 +1,6 @@
 PYTHON := python3
-HF_REPO := MarcosElFlamenco/chess_games
-
 
 PGN_DIR := pgn_mentor_all
-CSV_FILE := pgn_mentor_all.csv
 
 S3_BUCKET := go-bucket-craft
 S3_DIR := dataset
@@ -14,14 +11,19 @@ MIN_LEN := 30
 INPUT_LENGTH := 1023
 TEST_SIZE := 0.01
 
-CURRENT_DATASET := twic_dataset
 
-BASE := 9gb
+LICHESS_CSV_FILE := lichess_hf_dataset/lichess_9gb.csv
+LICHESS_BLOCKS_FILE := lichess_hf_dataset/lichess_9gb_blocks.csv
+
+BASE := mentor_shuffled_filtered
+CSV_FILE := $(BASE).csv
+BLOCKS_FILE := $(BASE)_blocks.csv
+
+
 scrap:
 	python download_and_upload/scrap.py \
 		--s 0.5 \
 		--o pgn_mentor_all \
-
 
 testing:
 	python3 test.py
@@ -36,32 +38,20 @@ download_twic:
 	python3 download_and_upload/download_twic.py \
 		--pgn_directory $(PGN_DIR) \
 		--url $(TWIC_URL) \
-
-
-## $(LINK_MAR24) $(LINK_APR24) $(LINK_JUN24) $(LINK_JUL24) $(LINK_AUG24) $(LINK_SEP24) \
-##clean 1 means do clean and 0 means dont
 	
 csv:
 	python3 filter/pgn_to_csv.py \
-		$(PGN_DIR) \ 
+		$(PGN_DIR) \
 		$(CSV_FILE) \
 		--min_elo 100 \
 		--max_elo 4000 \
 		--min_length 0 \
-		--processed_files processed_files_all.csv \
-		--debug
+		--processed_files processed_files.txt \
 
 cast:
 	python3 filter/castDataset.py \
 		--csv_file $(CSV_FILE) \
 		--dataset_name $(HF_DATASET)
-
-LICHESS_CSV_FILE := lichess_hf_dataset/lichess_9gb.csv
-LICHESS_BLOCKS_FILE := lichess_hf_dataset/lichess_9gb_blocks.csv
-
-BASE := randomNS
-CSV_FILE := random_dataset/$(BASE).csv
-BLOCKS_FILE := random_dataset/$(BASE)_blocks.csv
 
 truncate:
 	python filter/truncate.py \
@@ -92,10 +82,7 @@ lichess_blocks:
 		--input_file lichess_hf_dataset/lichess_6gb.csv \
 		--input_length $(INPUT_LENGTH) \
 
-
-
 streamline: truncate blocks tokens
-
 
 block_zip:
 	python3 zip_all.py \
@@ -103,13 +90,13 @@ block_zip:
 		--zip_directory $(ZIP_DIR) \
 		--bin_directory $(BIN_DIR) \
 		--files blocks
+
 bin_zip:
 	python3 filter/zip_all.py \
 		--base $(BASE) \
 		--zip_directory $(ZIP_DIR) \
 		--bin_directory $(BIN_DIR) \
 		--files bins
-
 
 stats_in_lichess:
 	python3 process_datasets.py \
@@ -126,7 +113,6 @@ uploads3:
 		--local_dir $(ZIP_DIR) \
 		--bucket $(S3_BUCKET) \
 		--s3_dir $(S3_DIR)
-
 
 filter_remote: clean
 	sky jobs launch -c boardCluster remote/sky.yaml
