@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import json
 import numpy as np
 import pickle
 import os
@@ -231,7 +232,95 @@ def validate_move(board, move_san):
     except ValueError:
         return False
 
-def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_verbose = False, max_moves = 0 ):
+def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_verbose=False, max_moves=0):
+    """
+    Precomputes legal moves for each position in the given PGN files and saves them.
+
+    Args:
+        pgn_files (list): List of PGN file paths.
+        output_file (str): Output file path to save the precomputed moves.
+        verbose (bool): Enable verbose output for debugging.
+        troubleshoot_verbose (bool): Additional verbose output for troubleshooting.
+        max_moves (int): Maximum number of moves to precompute. 0 for no limit.
+    """
+    with open("evaluation/game_lengths", 'r') as f:
+        game_lengths = json.load(f)
+ 
+    precomputed_games = []
+    total_skipped_games = 0  # Counter for skipped games
+
+    for pgn_file in pgn_files:
+        try:
+            with open(pgn_file, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+        except Exception as e:
+            print(f"Failed to read file {pgn_file}: {e}")
+            continue  # Skip to the next file if reading fails
+
+        # Split the content into segments separated by two newlines
+        segments = content.strip().split('\n\n')
+        # Filter out segments that contain only headers
+        games = [segment for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
+
+        if verbose:
+            print(f"Found {len(games)} games in {pgn_file}")
+
+        # Wrap games in tqdm for progress bar
+        for game_index, game in enumerate(tqdm(games, desc=f"Processing {pgn_file}", unit="game")):
+            try:
+                # Optionally limit the game length
+                moves_original = parse_pgn(game)  # Ensure parse_pgn can handle the game string
+                if max_moves == 0 or max_moves > 180:
+                    moves_length_filtered = moves_original[:-2]
+                elif max_moves == -1:
+                    l = game_lengths[game_index]
+                    print(f'got the following length {l}')
+                    moves_length_filtered = moves_original[:l]
+                else:
+                    moves_length_filtered = moves_original[:max_moves]
+
+                board = chess.Board()
+                precomputed_moves = []
+                for move_index, move in enumerate(moves_length_filtered):
+                    legal_moves_san = [board.san(m) for m in board.legal_moves]
+                    precomputed_moves.append(set(legal_moves_san))
+                    try:
+                        board.push_san(move)
+                    except ValueError:
+                        if verbose:
+                            print(f"Invalid move '{move}' in game {game_index+1}, move {move_index+1}")
+                        break  # Skip to next game if move is invalid
+
+                game_info = {
+                    "game_moves": moves_length_filtered,
+                    "precomputed_moves": precomputed_moves
+                }
+                precomputed_games.append(game_info)
+
+            except UnicodeDecodeError as ude:
+                if verbose:
+                    print(f"UnicodeDecodeError in game {game_index+1} of file {pgn_file}: {ude}")
+                total_skipped_games += 1
+                continue  # Skip corrupted game and continue
+            except Exception as e:
+                if verbose:
+                    print(f"Error processing game {game_index+1} in file {pgn_file}: {e}")
+                total_skipped_games += 1
+                continue  # Skip corrupted game and continue
+
+    # Save precomputed moves and games
+    try:
+        with open(output_file, 'wb') as f:
+            pickle.dump(precomputed_games, f)
+        print(f"Precomputed legal moves and games saved to {output_file}")
+    except Exception as e:
+        print(f"Failed to save to {output_file}: {e}")
+
+    if verbose:
+        print(f"Total skipped games due to errors: {total_skipped_games}")
+
+
+def precompute_legal_moves2(pgn_files, output_file, verbose=False, troubleshoot_verbose = False, max_moves = 0 ):
     """
     Precomputes legal moves for each position in the given PGN files and saves them.
 
@@ -240,7 +329,9 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
         output_file (str): Output file path to save the precomputed moves.
         verbose (bool): Enable verbose output for debugging.
     """
-
+    with open("game_lengths", 'r') as f:
+        game_lengths = json.load(f)
+    
     precomputed_games = []
     for pgn_file in pgn_files:
         with open(pgn_file, 'r') as f:
@@ -255,6 +346,10 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
                 moves_original = parse_pgn(game)
                 if max_moves == 0 or max_moves > 180:
                     moves_length_filtered = moves_original[:-2]
+                elif max_moves == -1:
+                    l = game_lengths[game_index]
+                    print(f'got the following length {l}')
+                    moves_length_filtered = moves_original[:l]
                 else:
                     moves_length_filtered = moves_original[:max_moves]
 
@@ -604,7 +699,7 @@ def precompute_legal_moves_wrapper(args):
     Args:
         args: Parsed command-line arguments.
     """
-    precompute_legal_moves(args.pgn_files, args.output_file, verbose=args.verbose, troubleshoot_verbose=args.troubleshoot_verbose)
+    precompute_legal_moves(args.pgn_files, args.output_file, verbose=args.verbose, troubleshoot_verbose=args.troubleshoot_verbose,max_moves=args.max_moves)
 
 def main():
     import argparse
@@ -618,6 +713,7 @@ def main():
     precompute_parser.add_argument('--output_file', type=str, required=True, help='Output file to save precomputed moves')
     precompute_parser.add_argument('--verbose', action='store_true', help='Enable verbose output for debugging')
     precompute_parser.add_argument('--troubleshoot_verbose', action='store_true', help='Enable verbose output for debugging')
+    precompute_parser.add_argument('--max_moves', type=int, help='Enable detailed illegal move information')
 
     # Subparser for evaluation mode
     eval_parser = subparsers.add_parser('eval', help='Evaluate model using precomputed legal moves')

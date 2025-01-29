@@ -122,8 +122,8 @@ generate_deterministic_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := random1000games
-GENERATE_NUM := 1000
+BENCHMARK_GAMES := random2128games
+GENERATE_NUM := 2128
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
 BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
@@ -154,7 +154,7 @@ D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 
 D3 := evaluation/eval_datasets/kasparov2128games.pkl
-D4 := evaluation/eval_datasets/random1000games.pkl
+D4 := evaluation/eval_datasets/random2128games.pkl
 
 MODELS := ../models
 benchmark_models:
@@ -174,7 +174,7 @@ new_benchmark_models:
 		--checkpoints \
 		--models_directory $(MODELS) \
 		--models lichess_karvhyp random_karvhypNSNR \
-		--datasets $(D4) \
+		--datasets $(D4)\
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
@@ -188,6 +188,7 @@ precompute_benchmark:
 		precompute \
 		--pgn_files $(BENCHMARK_PGN) \
 		--output_file $(BENCHMARK_PRECOMPUTE) \
+		--max_moves -1
 
 
 generate_benchmark_games:
