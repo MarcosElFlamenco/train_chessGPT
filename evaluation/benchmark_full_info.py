@@ -249,17 +249,15 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
             segments = content.strip().split('\n\n')
             # Filter out segments that contain only headers
             games = [segment[:1023] for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
-            for game in games:
-                print(len(game))
-
             # Wrap games in tqdm for progress bar
             for game_index, game in enumerate(tqdm(games, desc=f"Processing {pgn_file}", unit="game")):
                 precomputed_moves = []
                 moves_original = parse_pgn(game)
                 if max_moves == 0 or max_moves > 180:
-                    moves_length_filtered = moves_original[:max_moves]
-                else:
                     moves_length_filtered = moves_original[:-2]
+                else:
+                    moves_length_filtered = moves_original[:max_moves]
+
 
                 board = chess.Board()
                 for move_index, move in enumerate(moves_length_filtered):

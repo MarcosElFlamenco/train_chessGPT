@@ -5,6 +5,9 @@ DATA_DIR := data
 CONFIG := local.py
 LICHESS_YAML := lichess.yaml
 RANDOM_YAML := random.yaml
+LICHESS_FINETUNE_YAML := lichess_finetune.yaml
+RANDOM_FINETUNE_YAML := random_finetune.yaml
+
 
 
 local_train: $(TRAIN) 
@@ -35,18 +38,31 @@ remote_controller_train_lichess:
 remote_controller_train_random: 
 	sky jobs launch -c randomGamesCluster --env WANDB_API_KEY remote/$(RANDOM_YAML)
 
+remote_controller_finetune_lichess: 
+	sky jobs launch -c lichessGamesCluster --env WANDB_API_KEY remote/$(LICHESS_FINETUNE_YAML)
+
+remote_controller_finetune_random: 
+	sky jobs launch -c randomGamesCluster --env WANDB_API_KEY remote/$(RANDOM_FINETUNE_YAML)
+
+
 remote_nocontroller_train_lichess:
 	sky launch -c boardLichessCluster --use-spot --env WANDB_API_KEY remote/$(LICHESS_YAML)
+
+remote_nocontroller_train_random:
+	sky launch -c boardRandomCluster --use-spot --env WANDB_API_KEY remote/$(RANDOM_YAML)
+
+remote_nocontroller_finetune_lichess:
+	sky launch -c boardLichessCluster --use-spot --env WANDB_API_KEY remote/$(LICHESS_FINETUNE_YAML)
+
+remote_nocontroller_finetune_random:
+	sky launch -c boardRandomCluster --use-spot --env WANDB_API_KEY remote/$(RANDOM_FINETUNE_YAML)
+
 
 debug_remote_nocontroller_train_random:
 	sky launch -c debugCluster --use-spot --env WANDB_API_KEY remote/$(RANDOM_YAML)
 
 control_remote_nocontroller_train_random:
 	sky launch -c debugCluster2 --use-spot --env WANDB_API_KEY remote/random2.yaml
-
-
-remote_nocontroller_train_random:
-	sky launch -c boardNoCompileRandomCluster --use-spot --env WANDB_API_KEY remote/$(RANDOM_YAML)
 
 
 
@@ -106,7 +122,7 @@ generate_deterministic_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := kasparov2129games
+BENCHMARK_GAMES := random1000games
 GENERATE_NUM := 1000
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
@@ -138,6 +154,7 @@ D1 := evaluation/eval_datasets/random100games.pkl
 D2 := evaluation/eval_datasets/lichess13_100g_180m.pkl
 
 D3 := evaluation/eval_datasets/kasparov2128games.pkl
+D4 := evaluation/eval_datasets/random1000games.pkl
 
 MODELS := ../models
 benchmark_models:
@@ -157,7 +174,7 @@ new_benchmark_models:
 		--checkpoints \
 		--models_directory $(MODELS) \
 		--models lichess_karvhyp random_karvhypNSNR \
-		--datasets $(D3) $(D2) \
+		--datasets $(D4) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \
 		--temperature $(TEMPERATURE) \
