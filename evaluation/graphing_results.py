@@ -13,7 +13,7 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
     """
     plt.figure(figsize=(12, 7))
     colors = ['#FF5733', '#33C3FF', '#FF33A6', '#75FF33']  # Bright colors for models
-    line_styles = {'random100games': '-', 'lichess13_100g_180m': '--'}  # Line styles for datasets
+    line_styles = {'random100games': '-', 'lichess13_100g_180m': '--', 'random2128games' : '-', 'kasparov2128games' : '--'}  # Line styles for datasets
 
     # Assign unique colors for each model
     color_mapping = {model: colors[i % len(colors)] for i, model in enumerate(model_types)}
@@ -87,9 +87,9 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
     for model, color in color_mapping.items():
         legend_elements.append(plt.Line2D([0], [0], color=color, lw=2, label=model))
     
-    # Add line style-to-dataset legend
-    for dataset, style in line_styles.items():
-        legend_elements.append(plt.Line2D([0], [0], color='black', linestyle=style, lw=2, label=dataset))
+    for dataset in benchmark_datasets:
+        legend_elements.append(plt.Line2D([0], [0], color='black', linestyle=line_styles[dataset], lw=2, label=dataset))
+
 
     plt.legend(handles=legend_elements, title="Legend", loc='upper right')
 

@@ -9,8 +9,25 @@ import numpy as np
 from model import GPT, GPTConfig  # Ensure model.py is available
 import json
 
+MODEL_DIR = "../models"
+ELO_RESULTS_FILE = 'evaluation/elo_results.json'
+torch.manual_seed(42)
 
 
+# --- Utility functions ---
+def load_json_file(filepath):
+    """Load JSON file if it exists, otherwise return empty dict."""
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_json_file(filepath, data):
+    """Save data (dict) to JSON file."""
+    with open(filepath, 'w') as f:
+        json.dump(data, f, indent=4)
+
+ 
 def load_meta(data_dir):
     meta_path = os.path.join(data_dir, 'meta.pkl')
     if os.path.exists(meta_path):
@@ -104,6 +121,7 @@ def generate_next_move(model, prompt_pgn, stoi, itos, device, verbose=False, max
             except Exception as e:
                 if verbose:
                     print(f"Got the following error {e}")
+                if troubleshoot_verbose:
                     print(f"we got to prompting with this prompt {prompt_pgn} of length {len(prompt_pgn)}")
                 break
 
@@ -120,8 +138,10 @@ def generate_next_move(model, prompt_pgn, stoi, itos, device, verbose=False, max
             sampled_char = detokenize(sampled_token.cpu().tolist()[0], itos)
 
         # Check if space is generated, indicating the move is complete
-        if sampled_char == ' ':
+        breaking_chars = [" ",";","#","+"]
+        if sampled_char in breaking_chars: 
             break
+
 
         # Append the generated character to the move
         generated_move += sampled_char
@@ -148,9 +168,10 @@ def predict_next_characters(model, input_string, stoi, itos, device, max_length=
 
     return predicted_chars
 
-def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries,idx,verbose):
+def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries,idx,verbose,troubleshooting_verbose):
     retries = 0
     move = None
+    invalid_generations = []
     while retries < max_retries:
         generated_move = generate_next_move(model, prompt_pgn, stoi, itos, device,verbose=verbose)
         if generated_move == None:
@@ -160,17 +181,19 @@ def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_r
         else:
             try:
                 board.push_san(generated_move)
-                if verbose:
-                    print(f'Valid move generated, now pushing {generated_move}')
                 return generated_move
             except ValueError:
-                if verbose:
-                    print(f"On move {idx}, model generated the move {generated_move}, which is invalid!")
-                retries += 1
+               invalid_generations.append(generated_move)
+               retries += 1
+    if retries > 0:
+        if troubleshooting_verbose:
+            print(f'Prompted on input {prompt_pgn}')
+        if verbose:
+            print(f"On move {idx}, model generated the moves {invalid_generations}, which are/is invalid!")
     return move
 
 
-def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_path, time_per_move, max_retries,color,verbose):
+def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_path, time_per_move, max_retries,color,verbose,troubleshooting_verbose):
     if verbose:
         print("------------------------- \n starting game against stockfish \n -------------------------")
 
@@ -182,8 +205,6 @@ def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_pat
         print(f"Our model is playing {color}")
     while not board.is_game_over():
         move_number += 1
-        if verbose:
-            print(f'move number {move_number}')
         ##updating prompt pgn
         if move_number % 2 == 1:
             prompt_pgn += f"{move_number//2 + 1}."
@@ -192,12 +213,14 @@ def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_pat
 
         if (move_number + color_slider) % 2 == 1:
             ##gpt turn
-            gpt_move = chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries, move_number,verbose) 
+            gpt_move = chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries, move_number,verbose,troubleshooting_verbose) 
             if gpt_move == None:
-                print(f"Game lost for inability to generate valid move (max retries: {max_retries})")
+                if verbose:
+                    print(f"Game lost for inability to generate valid move (max retries: {max_retries})")
                 return "loss_invalid_gen",move_number
             elif gpt_move == "oversize":
-                print(f"Game lost because of context size")
+                if verbose:
+                    print(f"Game lost because of context size")
                 return "loss_context_size",move_number
             else:
                 pgn_move = gpt_move
@@ -205,8 +228,6 @@ def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_pat
             ##stockfish turn
             result = engine.play(board, chess.engine.Limit(time=time_per_move))
             pgn_stockfish_move = board.san(result.move)
-            if verbose:
-                print(f"Stockfish plays {pgn_stockfish_move}")
             board.push(result.move)
             pgn_move = pgn_stockfish_move
 
@@ -226,6 +247,43 @@ def update_elo(elo_a, elo_b, result, k=32):
     score_a = 1 if result == "win" else 0 if ((result == "loss") or (result == "loss_invalid_gen")) else 0.5
     return elo_a + k * (score_a - prob_a)
 
+def print_evaluation_report(args,entry_key):
+    elo_results = args.elo_results[entry_key]
+    model_name = elo_results["model_name"]
+    stockfish_name = elo_results["stockfish_name"]
+    counters = elo_results["counters"]
+    ng = counters["games_evaluated"]
+    print("--------------------EVALUATION REPORT--------------------")
+    print(f"Model {model_name} vs {stockfish_name}")
+    print(f"Total games: {ng}")
+    print(f"Wins: {counters["win"]} ({100 * (counters["win"]/ng):.2f}%)")
+    print(f"Loss: {counters["loss"]} ({100 * (counters["loss"]/ng):.2f}%)")
+    print(f"Context size: {counters["context_size"]} ({100 * (counters["context_size"]/ng):.2f}%)")
+    print(f"Invalid generation: {counters["invalid_gen"]} ({100 * (counters["invalid_gen"]/ng):.2f}%)")
+
+def quick_save_checkpoint(entry_key,game_idx, results_list, elo, QUICK_SAVE_FILE, quick_save):
+    quick_save[entry_key] = {
+        "games_so_far": results_list,
+        "current_elo": elo,
+        "num_games_evaluated": game_idx + 1
+    }
+    save_json_file(QUICK_SAVE_FILE, quick_save)
+    print(f"Quick-saved checkpoint at game {game_idx+1}.")
+
+def get_checkpoint_path(checkpoint):
+    model_name = "_".join(checkpoint.split("_")[:-1])
+    model_name_iteration_pth = checkpoint + ".pth"
+    checkpoint_path = os.path.join(MODEL_DIR,model_name,model_name_iteration_pth)
+    return checkpoint_path
+
+def update_memory_stats(entry_key,elo_results,results_list,elo,counters,game_idx):
+        counters["games_evaluated"] = game_idx + 1
+        elo_results[entry_key]["games"] = results_list
+        elo_results[entry_key]["final_elo"] = elo
+        elo_results[entry_key]["counters"] = counters
+
+
+
 def run_evaluation(args):
     """
     Evaluates the ELO of a given model by playing up to 100 games against Stockfish.
@@ -235,53 +293,32 @@ def run_evaluation(args):
     - Stores final results in 'elo_results.json'.
     """
     
-    # --- Utility functions ---
-    def load_json_file(filepath):
-        """Load JSON file if it exists, otherwise return empty dict."""
-        if os.path.exists(filepath):
-            with open(filepath, 'r') as f:
-                return json.load(f)
-        return {}
-
-    def save_json_file(filepath, data):
-        """Save data (dict) to JSON file."""
-        with open(filepath, 'w') as f:
-            json.dump(data, f, indent=4)
-
-    # --- Prepare evaluation and IO ---
     # Where we store final results
-    ELO_RESULTS_FILE = 'evaluation/elo_results.json'
     # Where we store partial results (quick save)
     QUICK_SAVE_FILE = 'evaluation/elo_quick_save.json'
-    invalid_gen_counter = 0
-    context_size_counter = 0
+    counters = {"evaluated_games": 0,"invalid_gen": 0,"context_size": 0,"loss": 0,"win": 0,}
     # Load model metadata
     vocab_size, stoi, itos = load_meta(args.data_dir)
     
-    # Prepare absolute or relative path for your checkpoint
-    args.checkpoint = 'evaluation/eval_models/' + args.checkpoint + '.pth'
-    model = load_model(args.checkpoint, args.device)
+    model = load_model(get_checkpoint_path(args.checkpoint), args.device)
 
     # Basic info about this run
     stockfish_path = args.stockfish_path
-    model_name = os.path.basename(args.checkpoint)  # e.g., "mymodel.pth"
-    stockfish_name = os.path.basename(stockfish_path)  # e.g., "stockfish_15_x64"
-
-    # Load or create main results dictionary
-    elo_results = load_json_file(ELO_RESULTS_FILE)
+    
+    model_name, stockfish_name = os.path.basename(args.checkpoint) , os.path.basename(stockfish_path)
 
     # We define a unique key to identify the combination of (model, stockfish)
-    entry_key = f"{model_name}_{stockfish_name}"
-
+    entry_key = f"{model_name}_{stockfish_name}_{args.desired_elo}"
+    print(f"entry key is {entry_key}")
     # If this entry already exists, check how many games are done
     if entry_key in elo_results:
         existing_entry = elo_results[entry_key]
-        completed_games = existing_entry.get("num_games_evaluated", 0)
+        completed_games = existing_entry["counters"].get("games_evaluated", 0) 
         
         if completed_games >= args.evaluation_games:
             # This means the model+stockfish combo is already fully evaluated
             print(f"Skipping evaluation: {model_name} vs {stockfish_name} already has {args.evaluation_games} games.")
-            return existing_entry["final_elo"]
+            return entry_key
         else:
             # Resume from partial results
             print(
@@ -291,7 +328,7 @@ def run_evaluation(args):
             elo = existing_entry["final_elo"]
             start_game_idx = completed_games
             results_list = existing_entry["games"]
-            invalid_gen_counter = existing_entry['invalid_gen_counter']
+            counters = existing_entry["counters"]
     else:
         # Start from scratch
         print(f"Starting new evaluation for {model_name} vs {stockfish_name}.")
@@ -301,11 +338,11 @@ def run_evaluation(args):
 
         # Create initial dictionary structure for this run
         elo_results[entry_key] = {
-            "model": model_name,
-            "stockfish": stockfish_name,
+            "model_name": model_name,
+            "stockfish_name": stockfish_name,
             "games": results_list,
             "final_elo": elo,
-            "num_games_evaluated": 0
+            "counters": counters
         }
 
     # Also check if there's a quick_save from a previous interruption
@@ -325,9 +362,8 @@ def run_evaluation(args):
     # Start Stockfish engine
     engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
         # Set desired Elo rating
-    desired_elo = args.desired_elo # Example: 1200 Elo
     max_elo = 3500      # Adjust based on your Stockfish version
-
+    desired_elo = args.desired_elo
     # Ensure the desired Elo is within the valid range
     if desired_elo < 0 or desired_elo > max_elo:
         raise ValueError(f"Elo rating must be between 0 and {max_elo}")
@@ -335,11 +371,11 @@ def run_evaluation(args):
     # Configure UCI options
     engine.configure({
         "UCI_LimitStrength": True,  # Enable strength limitation
-        "UCI_Elo": desired_elo      # Set the Elo rating
+        "UCI_Elo": args.desired_elo      # Set the Elo rating
     })
 
     # Check if the configuration was applied successfully
-    print("Stockfish is now configured with the desired Elo.")
+    print(f"Stockfish is now configured with Elo {args.desired_elo}.")
 
 
     # Now proceed with the evaluation from `start_game_idx+1` to `total_games`.
@@ -360,21 +396,26 @@ def run_evaluation(args):
         result, num_moves = play_game_against_stockfish(
             model, engine, stoi, itos, args.device, 
             stockfish_path, args.time_per_move, 
-            args.max_retries, color, args.verbose
+            args.max_retries, color, args.verbose, args.troubleshooting_verbose
         )
         if result == "loss_invalid_gen":
-            invalid_gen_counter += 1
+            counters["invalid_gen"] += 1
         elif result == "loss_context_size":
-            context_size_counter += 1
+            counters["context_size"] += 1
+        elif result == "loss":
+            counters["loss"] += 1
+        else:
+            counters["win"] += 1
+
 
 
         # Update ELO
         #   stockfish_elo is presumably some baseline or same as ours, or might be separate
         #   In your snippet, you used "elo = update_elo(elo, stockfish_elo, result)"
         ##TODO check this
-        stockfish_elo = 1320
-        elo = update_elo(elo, stockfish_elo, result)
-        print(f"Game {game_idx} finished after {num_moves} moves, result: {result}, updated elo is {elo}")
+        elo = update_elo(elo, args.desired_elo, result)
+        if args.verbose:
+            print(f"Game {game_idx} finished after {num_moves} moves, result: {result}, updated elo is {elo}")
 
         # Store this result
         game_info = {
@@ -387,23 +428,11 @@ def run_evaluation(args):
         results_list.append(game_info)
 
         # Update in-memory stats
-        elo_results[entry_key]["games"] = results_list
-        elo_results[entry_key]["final_elo"] = elo
-        elo_results[entry_key]["num_games_evaluated"] = game_idx + 1
-        elo_results[entry_key]["invalid_gen_counter"] = invalid_gen_counter
-        elo_results[entry_key]["context_size_counter"] = context_size_counter 
-
         # Quick save every 20 games (and if it’s not the final game)
         if (game_idx + 1) % 20 == 0 and (game_idx + 1) < total_games:
-            quick_save[entry_key] = {
-                "games_so_far": results_list,
-                "current_elo": elo,
-                "num_games_evaluated": game_idx + 1
-            }
-            save_json_file(QUICK_SAVE_FILE, quick_save)
-            print(f"Quick-saved checkpoint at game {game_idx+1}.")
+            quick_save_checkpoint(entry_key,game_idx, results_list, elo, QUICK_SAVE_FILE, quick_save)
 
-    # Once we've reached 100 games or finished the loop:
+    update_memory_stats(entry_key,elo_results,results_list,elo,counters,game_idx)
     # - Save final results in the main ELO results file
     save_json_file(ELO_RESULTS_FILE, elo_results)
 
@@ -412,17 +441,16 @@ def run_evaluation(args):
         del quick_save[entry_key]
         save_json_file(QUICK_SAVE_FILE, quick_save)
 
-    print(f"Evaluation complete for {model_name} vs {stockfish_name}. Over {game_idx+1} games, final ELO: {elo}. \n Invalid generate counter {invalid_gen_counter}, over context counter {context_size_counter}")
     engine.quit()
-    return elo
+    return entry_key
 
 
 def evaluate_models(model_names, args):
     for model_name in model_names:
-        args.checkpoint = os.path.join(args.models_dir, f"{model_name}.pth")
+        args.checkpoint = model_name
         args.save_file = os.path.join(args.save_dir, f"{model_name}_results.pkl")
-        final_elo = run_evaluation(args)
-        print(f"Model: {model_name}, Final Elo: {final_elo}")
+        entry_key = run_evaluation(args)
+        print_evaluation_report(args,entry_key)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate LLM against Stockfish to compute Elo.")
@@ -440,12 +468,16 @@ if __name__ == "__main__":
     parser.add_argument('--save_dir', type=str, help='Directory to save results.')
     parser.add_argument('--stockfish_path', type=str, required=True, help='Path to Stockfish executable.')
     parser.add_argument('--verbose', action = "store_true", help='Path to Stockfish executable.')
+    parser.add_argument('--troubleshooting_verbose', action = "store_true", help='Path to Stockfish executable.')
     args = parser.parse_args()
 
+    # Load or create main results dictionary
+    elo_results = load_json_file(ELO_RESULTS_FILE)
+    args.elo_results = elo_results
 
     if args.models_dir:
         model_names = [f[:-4] for f in os.listdir(args.models_dir) if f.endswith('.pth')]
         evaluate_models(model_names, args)
     else:
-        final_elo = run_evaluation(args)
-        print(f"Final Elo: {final_elo}")
+        entry_key = run_evaluation(args)
+        print_evaluation_report(args,entry_key)
