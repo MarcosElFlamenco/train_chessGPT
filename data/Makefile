@@ -34,11 +34,23 @@ download:
 		--zst_url $(MAR20) \
 		--post_clean 1
 
+GM_GAMES := GM_finetune_data/GM_games_dataset.csv
+MAIN = GM_finetune
+GM_CSV = $(MAIN).csv
+GM_BLOCKS = $(MAIN)_blocks.csv 
+
+
 download_twic:
 	python3 download_and_upload/download_twic.py \
 		--pgn_directory $(PGN_DIR) \
 		--url $(TWIC_URL) \
-	
+
+transcript_csv:
+	python3 filter/custom_csv_to_transcript.py \
+		--input_file $(GM_GAMES) \
+		--output_file $(GM_CSV) \
+		--minelo 2600 \
+		--maxelo 10000
 csv:
 	python3 filter/pgn_to_csv.py \
 		$(PGN_DIR) \
@@ -60,13 +72,13 @@ truncate:
 
 blocks:
 	python3 filter/csv_to_blocks.py \
-		--input_file $(CSV_FILE) \
+		--input_file $(GM_CSV) \
 		--input_length $(INPUT_LENGTH) \
 		--csv_type quotes
 
 tokens:
 	python3 tokenizeData.py \
-		--blocks_file $(BLOCKS_FILE) \
+		--blocks_file $(GM_BLOCKS) \
 		--bin_dir $(BIN_DIR) \
 		--test_size $(TEST_SIZE)
 
