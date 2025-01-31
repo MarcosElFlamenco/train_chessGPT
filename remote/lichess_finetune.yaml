@@ -35,4 +35,4 @@ setup: |
 
 run: |
   set -e
-  python3 train.py config/lichess_karvhyp_finetuneWC.py
+  python3 train.py config/lichess_karvhyp_finetuneGM.py

@@ -1,4 +1,4 @@
-name: random_train_karvhyp
+name: lichess_train_karvhyp
 
 resources:
   # Use spot instances to save cost.
@@ -35,5 +35,4 @@ setup: |
 
 run: |
   set -e
-  python3 train.py config/random_karvhyp_finetuneGM.py
-
+  python3 train.py config/gm_karvhyp.py

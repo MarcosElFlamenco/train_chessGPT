@@ -9,7 +9,7 @@ always_save_checkpoint = True
 
 wandb_log = True 
 mlflow_log = False 
-wandb_project = "karvhyp-chess-lichess-finetune"
+wandb_project = "karvhyp-chess-lichess-finetune-GM"
 wandb_run_name = "RUN600"
 
 dataset = "wc"
@@ -34,7 +34,7 @@ grad_clip = 1.0
 compile = False
 
 data_type = 'GM'
-checkpoint_key_prefix = f"lichess_karvhyp_finetune"
+checkpoint_key_prefix = f"lichess_karvhyp_finetune_GM"
 bucket_name = 'chess-gpt-checkpoints-finetune'
 data_bucket_name = "bins-bucket-craft"
 verbose = True
