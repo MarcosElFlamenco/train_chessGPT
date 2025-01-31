@@ -23,7 +23,7 @@ remote_controller_train_random:
 	sky jobs launch -c randomGamesCluster --env WANDB_API_KEY remote/$(RANDOM_YAML)
 
 remote_controller_train_gm: 
-	sky jobs launch -c randomGamesCluster --env WANDB_API_KEY remote/$(GM_YAML)
+	sky jobs launch -c gmGamesCluster --env WANDB_API_KEY remote/$(GM_YAML)
 
 
 remote_controller_finetune_lichess: 
