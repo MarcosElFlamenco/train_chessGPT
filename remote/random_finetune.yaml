@@ -35,5 +35,5 @@ setup: |
 
 run: |
   set -e
-  python3 train.py config/random_karvhyp_finetuneGM.py
+  python3 train.py config/random16M_finetuneGM.py
 
