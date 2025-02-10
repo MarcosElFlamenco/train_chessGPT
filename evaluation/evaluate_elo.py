@@ -8,6 +8,8 @@ import torch.nn.functional as F
 import numpy as np
 from model import GPT, GPTConfig  # Ensure model.py is available
 import json
+import math
+import sys
 
 MODEL_DIR = "../models"
 ELO_RESULTS_FILE = 'evaluation/elo_results.json'
@@ -168,12 +170,17 @@ def predict_next_characters(model, input_string, stoi, itos, device, max_length=
 
     return predicted_chars
 
-def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries,idx,verbose,troubleshooting_verbose):
+def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries,idx,verbose,troubleshooting_verbose,beam_search,beam_width):
     retries = 0
     move = None
     invalid_generations = []
+    if beam_search:
+        sorted_moves = generate_next_move_beam_search(model, prompt_pgn, stoi, itos, device,beam_width=beam_width,verbose=verbose)
     while retries < max_retries:
-        generated_move = generate_next_move(model, prompt_pgn, stoi, itos, device,verbose=verbose)
+        if beam_search:
+            generated_move = sorted_moves[retries]
+        else:
+            generated_move = generate_next_move(model, prompt_pgn, stoi, itos, device,verbose=verbose)
         if generated_move == None:
             if verbose:
                 print(f"When trying to generate move number {idx}, we exceded the size limits of the model") 
@@ -181,6 +188,10 @@ def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_r
         else:
             try:
                 board.push_san(generated_move)
+                if verbose:
+                    if generated_move.endswith('+'):
+
+                        print(f'Generated check move, which is {board.is_check()}')
                 return generated_move
             except ValueError:
                invalid_generations.append(generated_move)
@@ -189,11 +200,105 @@ def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_r
         if troubleshooting_verbose:
             print(f'Prompted on input {prompt_pgn}')
         if verbose:
-            print(f"On move {idx}, model generated the moves {invalid_generations}, which are/is invalid!")
+            if beam_search:
+                print(f"On move {idx}, model generated the moves {sorted_moves[0:retries]}, which are/is invalid!")
+            else:
+                print(f"On move {idx}, model generated the moves {invalid_generations}, which are/is invalid!")
     return move
 
+def generate_next_move_beam_search(model, prompt_pgn, stoi, itos, device, 
+                                   beam_width=3, max_length=1023, temperature=1.0, verbose=False):
+    """
+    Uses beam search to generate a chess move (in PGN) from a given prompt.
+    
+    Args:
+        model (GPT): The GPT model.
+        prompt_pgn (str): The current PGN string (prompt).
+        stoi (dict): Mapping from characters to token IDs.
+        itos (dict): Mapping from token IDs to characters.
+        device (str): Device to run the model on.
+        beam_width (int): Number of beams to keep.
+        max_length (int): Maximum number of tokens to generate.
+        temperature (float): Temperature for scaling logits.
+        verbose (bool): If True, print debugging information.
+    
+    Returns:
+        str: The move generated (with trailing spaces stripped), or None if nothing was generated.
+    """
+    # Each beam is a tuple: (current_prompt, generated_move, cumulative_log_prob)
+    beams = [(prompt_pgn, "", 0.0)]
+    completed_beams = []
+    end_chars = [" ",";","+","#"]
+    for step in range(max_length):
+        new_beams = []
+        for current_prompt, generated, cum_log_prob in beams:
+            # Check termination: if the last generated character is a space, we consider it finished.
+            if generated and generated[-1] in end_chars:
+                completed_beams.append((current_prompt, generated, cum_log_prob))
+                continue
 
-def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_path, time_per_move, max_retries,color,verbose,troubleshooting_verbose):
+            # Tokenize the current prompt and run the model
+            input_tokens = tokenize(current_prompt, stoi)
+            input_tensor = torch.from_numpy(input_tokens).unsqueeze(0).to(device)  # shape: (1, seq_len)
+            if input_tensor.size(1) > max_length:
+                if verbose:
+                    print(f"Input length {input_tensor.size(1)} exceeds max_length {max_length}.")
+                continue
+
+            with torch.no_grad():
+                try:
+                    logits, _ = model(input_tensor)
+                except Exception as e:
+                    if verbose:
+                        print(f"Error during model inference: {e}")
+                    continue
+
+            # Focus on the logits for the last token and adjust by temperature
+            last_logits = logits[:, -1, :] / temperature  # shape: (1, vocab_size)
+            probabilities = F.softmax(last_logits, dim=-1).squeeze(0)  # shape: (vocab_size)
+            
+            # Get top beam_width tokens
+            topk = torch.topk(probabilities, beam_width)
+            top_probs = topk.values.cpu().numpy()
+            top_indices = topk.indices.cpu().numpy()
+            
+            for prob, idx in zip(top_probs, top_indices):
+                char = detokenize([idx], itos)
+                new_generated = generated + char
+                # Add log probability for numerical stability (log product becomes sum)
+                new_cum_log_prob = cum_log_prob + math.log(prob + 1e-10)
+                new_prompt = current_prompt + char
+                new_beams.append((new_prompt, new_generated, new_cum_log_prob))
+        
+        if not new_beams:
+            break
+
+        # Keep only the beam_width most promising beams
+        new_beams.sort(key=lambda x: x[2], reverse=True)
+        beams = new_beams[:beam_width]
+
+        # If all beams have finished (i.e. ended with a space), we can stop early.
+        if all(beam[1].endswith((" ",";","+","#")) for beam in beams):
+            completed_beams.extend(beams)
+            break
+    # If we have any completed beams, choose the one with the highest log probability.
+    if completed_beams:
+        completed_beams.sort(key=lambda x: x[2], reverse=True)
+        best = completed_beams[0:beam_width]
+        best_pgn = [move[1].strip() for move in best]
+        best_move = completed_beams[0][1].strip()
+    else:
+        beams.sort(key=lambda x: x[2], reverse=True)
+        best_move = beams[0][1].strip() if beams else ""
+    
+    if verbose:
+        print(f"Beam search generated move: '{best_move}' with log-probability: {completed_beams[0][2] if completed_beams else beams[0][2]}")
+    
+    return best_pgn if best_pgn else None
+
+
+
+def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_path, time_per_move, max_retries,color,verbose,troubleshooting_verbose,beam_search,beam_width):
     if verbose:
         print("------------------------- \n starting game against stockfish \n -------------------------")
 
@@ -213,7 +318,7 @@ def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_pat
 
         if (move_number + color_slider) % 2 == 1:
             ##gpt turn
-            gpt_move = chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries, move_number,verbose,troubleshooting_verbose) 
+            gpt_move = chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_retries, move_number,verbose,troubleshooting_verbose,beam_search,beam_width) 
             if gpt_move == None:
                 if verbose:
                     print(f"Game lost for inability to generate valid move (max retries: {max_retries})")
@@ -232,7 +337,8 @@ def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_pat
             pgn_move = pgn_stockfish_move
 
         prompt_pgn += pgn_move + ' '
-
+    if verbose:
+        print(f"final pgn: {prompt_pgn}")
     if (move_number % 2 == 0 and color == "black") or (move_number % 2 == 1 and color == "white"):
         return 'win', move_number
     else:
@@ -248,6 +354,8 @@ def update_elo(elo_a, elo_b, result, k=32):
     return elo_a + k * (score_a - prob_a)
 
 def print_evaluation_report(args,entry_key):
+    if args.beam_search:
+        print("This elo was evaluated using beam search")
     elo_results = args.elo_results[entry_key]
     model_name = elo_results["model_name"]
     stockfish_name = elo_results["stockfish_name"]
@@ -285,6 +393,7 @@ def update_memory_stats(entry_key,elo_results,results_list,elo,counters,game_idx
 
 
 def run_evaluation(args):
+    
     """
     Evaluates the ELO of a given model by playing up to 100 games against Stockfish.
     - Resumes if the model+stockfish combo has been partially evaluated.
@@ -308,7 +417,10 @@ def run_evaluation(args):
     model_name, stockfish_name = os.path.basename(args.checkpoint) , os.path.basename(stockfish_path)
 
     # We define a unique key to identify the combination of (model, stockfish)
-    entry_key = f"{model_name}_{stockfish_name}_{args.desired_elo}"
+    if args.beam_search:
+        entry_key = f"beam_{model_name}_{stockfish_name}_{args.desired_elo}"
+    else:
+        entry_key = f"{model_name}_{stockfish_name}_{args.desired_elo}"
     print(f"entry key is {entry_key}")
     # If this entry already exists, check how many games are done
     if entry_key in elo_results:
@@ -396,7 +508,8 @@ def run_evaluation(args):
         result, num_moves = play_game_against_stockfish(
             model, engine, stoi, itos, args.device, 
             stockfish_path, args.time_per_move, 
-            args.max_retries, color, args.verbose, args.troubleshooting_verbose
+            args.max_retries, color, args.verbose, args.troubleshooting_verbose,
+            args.beam_search,args.beam_width
         )
         if result == "loss_invalid_gen":
             counters["invalid_gen"] += 1
@@ -469,6 +582,9 @@ if __name__ == "__main__":
     parser.add_argument('--stockfish_path', type=str, required=True, help='Path to Stockfish executable.')
     parser.add_argument('--verbose', action = "store_true", help='Path to Stockfish executable.')
     parser.add_argument('--troubleshooting_verbose', action = "store_true", help='Path to Stockfish executable.')
+
+    parser.add_argument('--beam_width', type=int, default=3, help='Number of beams to use in beam search.')
+    parser.add_argument('--beam_search', action= "store_true", help='Number of beams to use in beam search.')
     args = parser.parse_args()
 
     # Load or create main results dictionary
