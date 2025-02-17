@@ -60,16 +60,26 @@ print_legal_moves:
 
 elo_evaluation:
 	python3 evaluation/evaluate_elo.py \
-		--checkpoint random_karvhypNSNR_finetune_GM_100K \
-		--time_per_move 1e-8 \
+		--checkpoints random16M_finetune300GM_300K random16M_finetune300GM_200K random16M_finetune300GM_100K \
+		--time_per_move 1e-7 \
 		--max_retries 3 \
-		--evaluation_games 200 \
+		--evaluation_games 100 \
 		--desired_elo 1320 \
 		--save_file results.pkl \
 		--save_dir elo_results \
 		--stockfish_path ~/stockfish-ubuntu-x86-64-avx2/stockfish/stockfish1 \
 		--troubleshooting_verbose \
-		--verbose
+		--evaluation_key 5pawns \
+		--beam_width 3 \
+		--beam_search \
+
+stockfish_looks_at_gm:
+	python3 evaluation/stockfish_looks_at_gm.py \
+		--pgn_file evaluation/eval_datasets/kasparov2128games.pgn \
+		--output_file stockfish_opinion.json \
+		--max_games 2300 \
+		--stockfish_path ~/stockfish-ubuntu-x86-64-avx2/stockfish/stockfish1 \
+		--time_per_move 1e-2 \
 
 beam_elo_evaluation_gm:
 	python3 evaluation/evaluate_elo.py \
@@ -131,7 +141,7 @@ benchmark_models:
 		eval \
 		--checkpoints \
 		--models_directory $(MODELS) \
-		--models big_random16M_vocab32 lichess_karvhyp random_karvhypNSNR big_random16M_vocab32 gm_karvhyp \
+		--models random16M_finetune300GM \
 		--datasets $(D3) $(D4) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \

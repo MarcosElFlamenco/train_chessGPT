@@ -10,6 +10,7 @@ from model import GPT, GPTConfig  # Ensure model.py is available
 import json
 import math
 import sys
+import time
 
 MODEL_DIR = "../models"
 ELO_RESULTS_FILE = 'evaluation/elo_results.json'
@@ -154,6 +155,15 @@ def generate_next_move(model, prompt_pgn, stoi, itos, device, verbose=False, max
 
     return generated_move
 
+def evaluate_position(judge_engine,board):
+    # Analyze the position for the side to move
+    result = judge_engine.analyse(board, chess.engine.Limit(time = 1e-2))
+    score = result["score"].white()  # Get the score from White's perspective
+
+    # Extract the evaluation as a signed integer (centipawns)
+    white_evaluation = score.score(mate_score=100000)  # Mate scores are handled separately
+
+    return white_evaluation
 
 def predict_next_characters(model, input_string, stoi, itos, device, max_length=1024):
     input_tokens = np.array([stoi[c] for c in input_string], dtype=np.int64)
@@ -176,9 +186,10 @@ def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_r
     invalid_generations = []
     if beam_search:
         sorted_moves = generate_next_move_beam_search(model, prompt_pgn, stoi, itos, device,beam_width=beam_width,verbose=verbose)
+
     while retries < max_retries:
         if beam_search:
-            generated_move = sorted_moves[retries]
+            generated_move = sorted_moves[retries] if 0 <= retries < len(sorted_moves) else None 
         else:
             generated_move = generate_next_move(model, prompt_pgn, stoi, itos, device,verbose=verbose)
         if generated_move == None:
@@ -186,16 +197,27 @@ def chess_gpt_generated_move(model, board, prompt_pgn, stoi, itos, device, max_r
                 print(f"When trying to generate move number {idx}, we exceded the size limits of the model") 
             return "oversize"
         else:
+            extra_char = None
+            generated_move_cut = generated_move
+            if(generated_move.endswith(('+','#',';'))):
+                extra_char = generated_move[-1]
+                generated_move_cut = generated_move[:-1]
+
             try:
-                board.push_san(generated_move)
+                board.push_san(generated_move_cut)
                 if verbose:
                     if generated_move.endswith('+'):
-
-                        print(f'Generated check move, which is {board.is_check()}')
+                        print(f'Generated check char, which is {board.is_check()}')
+                    elif generated_move.endswith("#"):
+                        print(f'Generated checkmate char, which is {board.is_checkmate()}')
+                    elif generated_move.endswith(";"):
+                        print(f'Generated endgame char, which is {board.is_checkmate()}')
                 return generated_move
             except ValueError:
-               invalid_generations.append(generated_move)
-               retries += 1
+                if verbose:
+                    print(f"Move {generated_move} was not accepted")
+                invalid_generations.append(generated_move)
+                retries += 1
     if retries > 0:
         if troubleshooting_verbose:
             print(f'Prompted on input {prompt_pgn}')
@@ -282,6 +304,7 @@ def generate_next_move_beam_search(model, prompt_pgn, stoi, itos, device,
             completed_beams.extend(beams)
             break
     # If we have any completed beams, choose the one with the highest log probability.
+
     if completed_beams:
         completed_beams.sort(key=lambda x: x[2], reverse=True)
         best = completed_beams[0:beam_width]
@@ -290,25 +313,47 @@ def generate_next_move_beam_search(model, prompt_pgn, stoi, itos, device,
     else:
         beams.sort(key=lambda x: x[2], reverse=True)
         best_move = beams[0][1].strip() if beams else ""
+        best_pgn = []
     
     if verbose:
-        print(f"Beam search generated move: '{best_move}' with log-probability: {completed_beams[0][2] if completed_beams else beams[0][2]}")
-    
-    return best_pgn if best_pgn else None
+        #print(f"Beam search generated move: '{best_move}' with log-probability: {completed_beams[0][2] if completed_beams else beams[0][2]}")
+        print(f"Beam search generated move: '{best_pgn}")
+
+    return best_pgn 
+
+def play_and_evaluate(engine, board, time_per_move):
+    # Set up an info handler to capture evaluation data
+    white_evaluation = None
+    black_evaluation = None
+
+
+    with engine.analysis(board, chess.engine.Limit(time=time_per_move)) as analysis:
+        for info in analysis:
+            # Extract the latest evaluation score
+            score = info.get("score", None)
+            if score is not None:
+                white_evaluation = score.white().score(mate_score=100000)  # From White's perspective
+                black_evaluation = -white_evaluation  # From Black's perspective
+
+    # Play the best move
+    result = engine.play(board, chess.engine.Limit(time=time_per_move))
+#    best_move = result.move
+
+    return result, white_evaluation, black_evaluation
 
 
 
-def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_path, time_per_move, max_retries,color,verbose,troubleshooting_verbose,beam_search,beam_width):
-    if verbose:
-        print("------------------------- \n starting game against stockfish \n -------------------------")
+def play_game_against_stockfish(model, engine, judge_engine, stoi, itos, device, stockfish_path, time_per_move, max_retries,color,verbose,troubleshooting_verbose,beam_search,beam_width):
+    print("------------------------- \n starting game against stockfish \n -------------------------")
 
     board = chess.Board()
+    board_score = 25
     prompt_pgn = ';'
     move_number = 0
     color_slider = 0 if (color == "white") else 1
     if verbose:
         print(f"Our model is playing {color}")
-    while not board.is_game_over():
+    while -500 <= board_score <= 500:
         move_number += 1
         ##updating prompt pgn
         if move_number % 2 == 1:
@@ -331,18 +376,23 @@ def play_game_against_stockfish(model, engine, stoi, itos, device, stockfish_pat
                 pgn_move = gpt_move
         else:
             ##stockfish turn
+            start_time = time.time()
+           # result, w_score, b_score = play_and_evaluate(engine, board, time_per_move)
             result = engine.play(board, chess.engine.Limit(time=time_per_move))
+            end_time = time.time()
+            elapsed_time = end_time - start_time
             pgn_stockfish_move = board.san(result.move)
             board.push(result.move)
+            board_score = evaluate_position(judge_engine, board)
             pgn_move = pgn_stockfish_move
 
         prompt_pgn += pgn_move + ' '
     if verbose:
         print(f"final pgn: {prompt_pgn}")
     if (move_number % 2 == 0 and color == "black") or (move_number % 2 == 1 and color == "white"):
-        return 'win', move_number
+        return 'win', move_number, board_score
     else:
-        return 'loss',move_number
+        return 'loss',move_number, board_score
 
 
 def update_elo(elo_a, elo_b, result, k=32):
@@ -417,10 +467,11 @@ def run_evaluation(args):
     model_name, stockfish_name = os.path.basename(args.checkpoint) , os.path.basename(stockfish_path)
 
     # We define a unique key to identify the combination of (model, stockfish)
+    entry_key = args.evaluation_key
     if args.beam_search:
-        entry_key = f"beam_{model_name}_{stockfish_name}_{args.desired_elo}"
+        entry_key += f"beam_{model_name}_{stockfish_name}_{args.desired_elo}"
     else:
-        entry_key = f"{model_name}_{stockfish_name}_{args.desired_elo}"
+        entry_key += f"{model_name}_{stockfish_name}_{args.desired_elo}"
     print(f"entry key is {entry_key}")
     # If this entry already exists, check how many games are done
     if entry_key in elo_results:
@@ -473,6 +524,7 @@ def run_evaluation(args):
 
     # Start Stockfish engine
     engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+    judge_engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
         # Set desired Elo rating
     max_elo = 3500      # Adjust based on your Stockfish version
     desired_elo = args.desired_elo
@@ -505,12 +557,15 @@ def run_evaluation(args):
         # We'll assume it returns: (result, num_moves)
         # For demonstration, let's mock them:
         ##TODO input color to the game and have it play the correct color
-        result, num_moves = play_game_against_stockfish(
-            model, engine, stoi, itos, args.device, 
+        try:
+            result, num_moves, board_score = play_game_against_stockfish(
+            model, engine, judge_engine, stoi, itos, args.device, 
             stockfish_path, args.time_per_move, 
             args.max_retries, color, args.verbose, args.troubleshooting_verbose,
             args.beam_search,args.beam_width
         )
+        except Exception as e:
+            print(f'got the following exception {e}, with the values {result}, {num_moves}, {board_score}')
         if result == "loss_invalid_gen":
             counters["invalid_gen"] += 1
         elif result == "loss_context_size":
@@ -527,8 +582,7 @@ def run_evaluation(args):
         #   In your snippet, you used "elo = update_elo(elo, stockfish_elo, result)"
         ##TODO check this
         elo = update_elo(elo, args.desired_elo, result)
-        if args.verbose:
-            print(f"Game {game_idx} finished after {num_moves} moves, result: {result}, updated elo is {elo}")
+        print(f"Game {game_idx} finished after {num_moves} moves, result: {result}, final board state {board_score} updated elo is {elo}")
 
         # Store this result
         game_info = {
@@ -567,7 +621,7 @@ def evaluate_models(model_names, args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate LLM against Stockfish to compute Elo.")
-    parser.add_argument('--checkpoint', type=str, help='Path to model checkpoint.')
+    parser.add_argument('--checkpoints', type=str,nargs="+", help='Path to model checkpoint.')
     parser.add_argument('--data_dir', type=str, default='data', help='Directory with meta.pkl.')
     parser.add_argument('--device', type=str, default='cuda', help='Device to run the model on.')
     parser.add_argument('--num_games', type=int, default=100, help='Number of games to play.')
@@ -580,6 +634,7 @@ if __name__ == "__main__":
     parser.add_argument('--models_dir', type=str, help='Directory with model checkpoints.')
     parser.add_argument('--save_dir', type=str, help='Directory to save results.')
     parser.add_argument('--stockfish_path', type=str, required=True, help='Path to Stockfish executable.')
+    parser.add_argument('--evaluation_key', type=str, required=True, help='Path to Stockfish executable.')
     parser.add_argument('--verbose', action = "store_true", help='Path to Stockfish executable.')
     parser.add_argument('--troubleshooting_verbose', action = "store_true", help='Path to Stockfish executable.')
 
@@ -595,5 +650,7 @@ if __name__ == "__main__":
         model_names = [f[:-4] for f in os.listdir(args.models_dir) if f.endswith('.pth')]
         evaluate_models(model_names, args)
     else:
-        entry_key = run_evaluation(args)
-        print_evaluation_report(args,entry_key)
+        for checkpoint in args.checkpoints:
+            args.checkpoint = checkpoint
+            entry_key = run_evaluation(args)
+            print_evaluation_report(args,entry_key)
