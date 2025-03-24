@@ -9,7 +9,7 @@ always_save_checkpoint = True
 
 wandb_log = True 
 mlflow_log = False 
-wandb_project = "chess-gpt-random-big-vocab32"
+wandb_project = "chess-gpt-random-16M-2-600"
 wandb_run_name = "8layer_lichess"
 
 dataset = "big_random_generated"
@@ -25,17 +25,17 @@ n_head = 8
 n_embd = 512
 dropout = 0.0
 
-learning_rate = 3e-5
+learning_rate = 2e-4
 max_iters = 600000
 lr_decay_iters = max_iters  # make equal to max_iters usually
-min_lr = 1e-5  # learning_rate / 10 usually
+min_lr = 2e-5  # learning_rate / 10 usually
 beta2 = 0.95  # make a bit bigger because number of tokens per iter is small
 grad_clip = 1.0
 
 compile = True
 
-data_type = '16M'
-checkpoint_key_prefix = f"big_random{data_type}_vocab32"
+data_type = '16MnoS'
+checkpoint_key_prefix = f"2_random_600"
 bucket_name = 'chess-gpt-checkpoints-600'
 verbose = False
 debugging = False

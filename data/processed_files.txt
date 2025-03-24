@@ -948,3 +948,4 @@
 /home/oscar/train_ChessGPT/data/pgn_mentor_all/SovietChamp1931.pgn
 /home/oscar/train_ChessGPT/data/pgn_mentor_all/ReggioEmilia1992.pgn
 /home/oscar/train_ChessGPT/data/pgn_mentor_all/LasPalmas1996.pgn
+/home/oscar/train_ChessGPT/data/mydir/kasparov2128games.pgn

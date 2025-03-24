@@ -53,8 +53,8 @@ transcript_csv:
 		--maxelo 10000
 csv:
 	python3 filter/pgn_to_csv.py \
-		$(PGN_DIR) \
-		$(CSV_FILE) \
+		mydir \
+		kasparov2128games.csv \
 		--min_elo 100 \
 		--max_elo 4000 \
 		--min_length 0 \

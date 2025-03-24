@@ -101,7 +101,7 @@ TEMPERATURE := 1.0
 
 generate_vanilla:
 	$(PYTHON) evaluation/model_generate.py \
-		--checkpoint $(CHECKPOINT) \
+		--checkpoint ../models/bigrandom600/bigrandom600_15K.pth \
 		--input $(INPUT_PGN) \
 		--data_dir $(DATA_DIR)
 
@@ -141,7 +141,7 @@ benchmark_models:
 		eval \
 		--checkpoints \
 		--models_directory $(MODELS) \
-		--models random16M_finetune300GM \
+		--models 2_random_600 \
 		--datasets $(D3) $(D4) \
 		--data_dir $(DATA_DIR) \
 		--results_file $(RESULTS_FILE) \

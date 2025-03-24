@@ -18,7 +18,7 @@ file_mounts:
     store: s3
     mode: MOUNT
   /sourcecsv:
-    source: s3://chess-gpt-checkpoints
+    source: s3://chess-gpt-checkpoints-600
     store: s3
     mode: MOUNT
 

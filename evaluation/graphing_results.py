@@ -4,16 +4,25 @@ import matplotlib.pyplot as plt
 import bisect
 import matplotlib.cm as cm
 
+
 def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list):
     """
     Enhanced version of the error frequency plot:
     - Bright and distinct colors for each model.
     - Different line styles for different datasets.
-    - Simplified legend showing color-to-model and line style-to-dataset correspondence.
+    - Separate legends for models and datasets.
     """
-    plt.figure(figsize=(12, 7))
-    colors = ['#FF5733', '#33C3FF', '#FF33A6', '#75FF33']  # Bright colors for models
-    line_styles = {'random100games': '-', 'lichess13_100g_180m': '--', 'random2128games' : '-', 'kasparov2128games' : '--'}  # Line styles for datasets
+    fig, ax = plt.subplots(figsize=(12, 7))
+    ax.set_yscale("log")
+
+    # Define color palettes
+    colors = ["#6ebf06", "#e89915", "#e31609", "#2292a4", "#714955"]
+    line_styles = {
+        'random100games': '-',
+        'lichess13_100g_180m': '--',
+        'random2128games': '-',
+        'kasparov2128games': '--'
+    }
 
     # Assign unique colors for each model
     color_mapping = {model: colors[i % len(colors)] for i, model in enumerate(model_types)}
@@ -53,7 +62,7 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
                         num_mistakes += num_mistakes_game
 
                     error_freq = num_mistakes / total_moves_tested_for
-                    iteration_val =  30
+                    iteration_val = 30
                     try:
                         iteration_val = int(iteration[:-1])
                     except Exception as e:
@@ -64,39 +73,53 @@ def plot_error_frequencies(data, model_types, benchmark_datasets, max_moves_list
                 if iteration_vals:
                     iteration_vals, error_freqs = zip(*sorted(zip(iteration_vals, error_freqs)))
                     color = color_mapping[model]
-                    plt.plot(
+                    ax.plot(
                         iteration_vals,
                         error_freqs,
                         line_styles[dataset],
                         color=color,
-                        linewidth=2
+                        linewidth=2,
+                        label=f"{model} - {dataset}"  # Temporary legend label (not final)
                     )
-                    plt.scatter(
+                    ax.scatter(
                         iteration_vals,
                         error_freqs,
                         color=color,
-                        edgecolor='black',  # Optional, adds an outline to the points
-                        zorder=5  # Ensures the points are above the line
+                        edgecolor='black',
+                        zorder=5
                     )
 
-    # Add a simplified legend
-    legend_elements = []
-#    legend_elements = ["lichess_trained","random_trained","random_tested","lichess_tested"]
-    
-    # Add color-to-model legend
-    for model, color in color_mapping.items():
-        legend_elements.append(plt.Line2D([0], [0], color=color, lw=2, label=model))
-    
-    for dataset in benchmark_datasets:
-        legend_elements.append(plt.Line2D([0], [0], color='black', linestyle=line_styles[dataset], lw=2, label=dataset))
+    # Create legends
+    legend_names = {
+        "lichess_karvhyp": "lichess",
+        "random_karvhypNSNR": "small_random",
+        "big_random16M_vocab32": "big_random"
+    }
 
+    # Model legend (color-based)
+    model_legend_elements = [
+        plt.Line2D([0], [0], color=color_mapping[model], lw=2, label=legend_names.get(model, model))
+        for model in model_types
+    ]
 
-    plt.legend(handles=legend_elements, title="Legend", loc='upper right')
+    # Dataset legend (line-style-based)
+    dataset_legend_elements = [
+        plt.Line2D([0], [0], color='black', linestyle=line_styles[dataset], lw=2, label=dataset)
+        for dataset in benchmark_datasets
+    ]
+
+    model_legend = ax.legend(handles=model_legend_elements, title="Models", loc='upper right')
+    ax.add_artist(model_legend)  # Retain the first legend
+
+    dataset_legend = ax.legend(handles=dataset_legend_elements, title="Datasets", loc='upper left')
 
     # Customize the graph
-    plt.title("Error Frequency vs. Iterations (Simplified Legend)")
-    plt.xlabel("Iterations (K)")
-    plt.ylabel("Error Frequency (mistakes / total moves)")
-    plt.grid(True)
+    ax.set_title("Error Frequency vs. Iterations")
+    ax.set_xlabel("Iterations (K)")
+    ax.set_ylabel("Error Frequency (log-scale)")
+    ax.grid(True)
     plt.tight_layout()
+
+    plt.savefig("generation_results.png")
     plt.show()
+
