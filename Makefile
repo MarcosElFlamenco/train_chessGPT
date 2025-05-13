@@ -99,6 +99,7 @@ generate_vanilla:
 
 # Has the model play against itself for entire moves (multiple tokens)
 # and validates the validity of said moves in the board configuration
+# The code can serve as example for generating token sequences
 generate_moves:
 	$(PYTHON) evaluation/generate_and_validate.py \
 		--checkpoint $(CHECKPOINT) \
@@ -107,41 +108,13 @@ generate_moves:
 		--deterministic \
 
 ##BENCHMARKING
-BENCHMARK_GAMES := random2128games
-GENERATE_NUM := 2128
+BENCHMARK_GAMES := twic1592
+
 BENCHMARK_CSV := evaluation/eval_datasets/$(BENCHMARK_GAMES).csv
 BENCHMARK_PGN := evaluation/eval_datasets/$(BENCHMARK_GAMES).pgn
-BENCHMARK_PRECOMPUTE := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
-BENCHMARK := benchmark_full_info.py
-RESULTS_FILE := evaluation/generation_results.csv
 
-KARVONEN_MODEL := /home/oscar/train_ChessGPT/evaluation/eval_models/lichess_8layers_ckpt_no_optimizer.pt
-
-EVALUATION_DATASET := evaluation/eval_datasets/random100games.pkl
-MODELS_DIRECTORY := ../models
-
-benchmark_models:
-	$(PYTHON) evaluation/$(BENCHMARK) \
-		eval \
-		--checkpoints \
-		--models_directory $(MODELS_DIRECTORY) \
-		--models 2_random_600 \
-		--datasets $(D3) $(D4) \
-		--data_dir $(DATA_DIR) \
-		--results_file $(RESULTS_FILE) \
-		--temperature $(TEMPERATURE) \
-
-plot:
-	$(PYTHON) evaluation/graphing_results.py
-
-precompute_benchmark:
-	$(PYTHON) evaluation/$(BENCHMARK) \
-		precompute \
-		--pgn_files $(BENCHMARK_PGN) \
-		--output_file $(BENCHMARK_PRECOMPUTE) \
-		--max_moves -1
-
-
+GENERATE_NUM := 20
+##You can generate your own random games with this command
 generate_benchmark_games:
 	$(PYTHON) data/random_dataset/generate_random/gen_random.py \
 		--num_games $(GENERATE_NUM) \
@@ -151,11 +124,43 @@ generate_benchmark_games:
 		--pgn_file $(BENCHMARK_PGN) \
 		--move_column transcript
 
-generate_precompute_random_benchmark_games: generate_benchmark_games precompute_benchmark
 
-full_benchmark: generate_precompute_random_benchmark_games benchmark_model
+BENCHMARK_PKL := evaluation/eval_datasets/$(BENCHMARK_GAMES).pkl
+##wether the PGN comes from your generation or online real games,
+##you can precompute the valid moves for every step of the game into a .pkl file
+## with this command so it won't redo that math for every model that runs on the same test sample
+## Also, you have to because thats what the next step takes as input
+precompute_benchmark:
+	$(PYTHON) evaluation/benchmark.py \
+		precompute \
+		--pgn_files $(BENCHMARK_PGN) \
+		--output_file $(BENCHMARK_PKL) \
+		--max_moves 0
+
+RESULTS_FILE := evaluation/outputs/generation_results.csv
+
+KARVONEN_MODEL := /home/oscar/train_ChessGPT/evaluation/eval_models/lichess_8layers_ckpt_no_optimizer.pt
+
+EVALUATION_DATASET := evaluation/eval_datasets/$(BENCHMARK_PKL)
+MODELS_DIRECTORY := ../models
+
+## Here you can give the pkl file of your choice and benchmark a model
+## By default, will evaluate all models starting with the prefix given as "models" argument
+## in the "models_directory" argument
+
+benchmark_models:
+	$(PYTHON) evaluation/benchmark.py \
+		eval \
+		--checkpoints \
+		--models_directory $(MODELS_DIRECTORY) \
+		--models 2_random_600 \
+		--datasets $(BENCHMARK_PKL) \
+		--data_dir $(DATA_DIR) \
+		--results_file $(RESULTS_FILE) \
+		--temperature $(TEMPERATURE) \
+
+plot:
+	$(PYTHON) evaluation/graphing_results.py
 
 remote_benchmark_model:
-	sky jobs launch -c benchmarkCluster remote/benchmark.yaml
-	
-
+	sky launch -c benchmarkCluster benchmark.yaml -i 10 --down

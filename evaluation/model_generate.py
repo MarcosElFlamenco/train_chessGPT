@@ -5,7 +5,7 @@ import pickle
 import os
 import re
 import chess
-from model import GPT, GPTConfig  # Ensure model.py is in the same directory or adjust the import path accordingly
+from utils.model import GPT, GPTConfig  # Ensure model.py is in the same directory or adjust the import path accordingly
 
 # Optional: If your checkpoint is stored on S3 or a remote location,
 # implement the logic to download it. For simplicity, this script assumes it's local.

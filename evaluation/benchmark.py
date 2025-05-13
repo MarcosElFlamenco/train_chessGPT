@@ -1,12 +1,13 @@
 import torch
 import torch.nn.functional as F
+import json
 import numpy as np
 import pickle
 import os
 import re
 import chess
 import sys
-from model import GPT, GPTConfig  # Ensure model.py is in the same directory or adjust the import path accordingly
+from utils.model import GPT, GPTConfig  # Ensure model.py is in the same directory or adjust the import path accordingly
 from tqdm import tqdm  # Added for progress bars
 
 def remove_prefix_from_state_dict(state_dict, prefix='_orig_mod.'):
@@ -231,7 +232,89 @@ def validate_move(board, move_san):
     except ValueError:
         return False
 
-def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_verbose = False, max_moves = 0 ):
+def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_verbose=False, max_moves=0):
+    """
+    Precomputes legal moves for each position in the given PGN files and saves them.
+
+    Args:
+        pgn_files (list): List of PGN file paths.
+        output_file (str): Output file path to save the precomputed moves.
+        verbose (bool): Enable verbose output for debugging.
+        troubleshoot_verbose (bool): Additional verbose output for troubleshooting.
+        max_moves (int): Maximum number of moves to precompute. 0 for no limit.
+    """
+ 
+    precomputed_games = []
+    total_skipped_games = 0  # Counter for skipped games
+
+    for pgn_file in pgn_files:
+        try:
+            with open(pgn_file, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+        except Exception as e:
+            print(f"Failed to read file {pgn_file}: {e}")
+            continue  # Skip to the next file if reading fails
+
+        # Split the content into segments separated by two newlines
+        segments = content.strip().split('\n\n')
+        # Filter out segments that contain only headers
+        games = [segment for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
+
+        if verbose:
+            print(f"Found {len(games)} games in {pgn_file}")
+
+        # Wrap games in tqdm for progress bar
+        for game_index, game in enumerate(tqdm(games, desc=f"Processing {pgn_file}", unit="game")):
+            try:
+                # Optionally limit the game length
+                moves_original = parse_pgn(game)  # Ensure parse_pgn can handle the game string
+                if max_moves == 0 or max_moves > 180:
+                    moves_length_filtered = moves_original[:-2]
+                else:
+                    moves_length_filtered = moves_original[:max_moves]
+
+                board = chess.Board()
+                precomputed_moves = []
+                for move_index, move in enumerate(moves_length_filtered):
+                    legal_moves_san = [board.san(m) for m in board.legal_moves]
+                    precomputed_moves.append(set(legal_moves_san))
+                    try:
+                        board.push_san(move)
+                    except ValueError:
+                        if verbose:
+                            print(f"Invalid move '{move}' in game {game_index+1}, move {move_index+1}")
+                        break  # Skip to next game if move is invalid
+
+                game_info = {
+                    "game_moves": moves_length_filtered,
+                    "precomputed_moves": precomputed_moves
+                }
+                precomputed_games.append(game_info)
+
+            except UnicodeDecodeError as ude:
+                if verbose:
+                    print(f"UnicodeDecodeError in game {game_index+1} of file {pgn_file}: {ude}")
+                total_skipped_games += 1
+                continue  # Skip corrupted game and continue
+            except Exception as e:
+                if verbose:
+                    print(f"Error processing game {game_index+1} in file {pgn_file}: {e}")
+                total_skipped_games += 1
+                continue  # Skip corrupted game and continue
+
+    # Save precomputed moves and games
+    try:
+        with open(output_file, 'wb') as f:
+            pickle.dump(precomputed_games, f)
+        print(f"Precomputed legal moves and games saved to {output_file}")
+    except Exception as e:
+        print(f"Failed to save to {output_file}: {e}")
+
+    if verbose:
+        print(f"Total skipped games due to errors: {total_skipped_games}")
+
+
+def precompute_legal_moves2(pgn_files, output_file, verbose=False, troubleshoot_verbose = False, max_moves = 0 ):
     """
     Precomputes legal moves for each position in the given PGN files and saves them.
 
@@ -240,7 +323,9 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
         output_file (str): Output file path to save the precomputed moves.
         verbose (bool): Enable verbose output for debugging.
     """
-
+    with open("game_lengths", 'r') as f:
+        game_lengths = json.load(f)
+    
     precomputed_games = []
     for pgn_file in pgn_files:
         with open(pgn_file, 'r') as f:
@@ -249,17 +334,19 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
             segments = content.strip().split('\n\n')
             # Filter out segments that contain only headers
             games = [segment[:1023] for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
-            for game in games:
-                print(game)
-
             # Wrap games in tqdm for progress bar
             for game_index, game in enumerate(tqdm(games, desc=f"Processing {pgn_file}", unit="game")):
                 precomputed_moves = []
                 moves_original = parse_pgn(game)
                 if max_moves == 0 or max_moves > 180:
-                    moves_length_filtered = moves_original[:180]
-                else:
                     moves_length_filtered = moves_original[:-2]
+                elif max_moves == -1:
+                    l = game_lengths[game_index]
+                    print(f'got the following length {l}')
+                    moves_length_filtered = moves_original[:l]
+                else:
+                    moves_length_filtered = moves_original[:max_moves]
+
 
                 board = chess.Board()
                 for move_index, move in enumerate(moves_length_filtered):
@@ -280,30 +367,128 @@ def precompute_legal_moves(pgn_files, output_file, verbose=False, troubleshoot_v
     # Save precomputed moves and games
 
     with open(output_file, 'wb') as f:
-        print(precomputed_games)
         pickle.dump(precomputed_games, f)
     print(f"Precomputed legal moves and games saved to {output_file}")
 
-def run_validation(args):
+def precompute_legal_moves2(pgn_files, output_file, verbose=False, troubleshoot_verbose=False, max_moves=0):
+    """
+    Precomputes legal moves for each position in the given PGN files and saves them.
+
+    Args:
+        pgn_files (list): List of PGN file paths.
+        output_file (str): Output file path to save the precomputed moves.
+        verbose (bool): Enable verbose output for debugging.
+        troubleshoot_verbose (bool): Additional verbose output for troubleshooting.
+        max_moves (int): Maximum number of moves to precompute. 0 for no limit.
+    """
+
+    precomputed_games = []
+    total_skipped_games = 0  # Counter for skipped games
+
+    for pgn_file in pgn_files:
+        try:
+            with open(pgn_file, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+        except Exception as e:
+            print(f"Failed to read file {pgn_file}: {e}")
+            continue  # Skip to the next file if reading fails
+
+        # Split the content into segments separated by two newlines
+        segments = content.strip().split('\n\n')
+        # Filter out segments that contain only headers
+        games = [segment for segment in segments if not all(line.startswith('[') for line in segment.split('\n'))]
+
+        if verbose:
+            print(f"Found {len(games)} games in {pgn_file}")
+
+        # Wrap games in tqdm for progress bar
+        for game_index, game in enumerate(tqdm(games, desc=f"Processing {pgn_file}", unit="game")):
+            try:
+                # Optionally limit the game length
+                moves_original = parse_pgn(game)  # Ensure parse_pgn can handle the game string
+                if max_moves == 0 or max_moves > 180:
+                    moves_length_filtered = moves_original[:max_moves]
+                else:
+                    moves_length_filtered = moves_original[:-2]
+
+                board = chess.Board()
+                precomputed_moves = []
+                for move_index, move in enumerate(moves_length_filtered):
+                    legal_moves_san = [board.san(m) for m in board.legal_moves]
+                    precomputed_moves.append(set(legal_moves_san))
+                    try:
+                        board.push_san(move)
+                    except ValueError:
+                        if verbose:
+                            print(f"Invalid move '{move}' in game {game_index+1}, move {move_index+1}")
+                        break  # Skip to next game if move is invalid
+
+                game_info = {
+                    "game_moves": moves_length_filtered,
+                    "precomputed_moves": precomputed_moves
+                }
+                precomputed_games.append(game_info)
+
+            except UnicodeDecodeError as ude:
+                if verbose:
+                    print(f"UnicodeDecodeError in game {game_index+1} of file {pgn_file}: {ude}")
+                total_skipped_games += 1
+                continue  # Skip corrupted game and continue
+            except Exception as e:
+                if verbose:
+                    print(f"Error processing game {game_index+1} in file {pgn_file}: {e}")
+                total_skipped_games += 1
+                continue  # Skip corrupted game and continue
+
+    # Save precomputed moves and games
+    try:
+        with open(output_file, 'wb') as f:
+            pickle.dump(precomputed_games, f)
+        print(f"Precomputed legal moves and games saved to {output_file}")
+    except Exception as e:
+        print(f"Failed to save to {output_file}: {e}")
+
+    if verbose:
+        print(f"Total skipped games due to errors: {total_skipped_games}")
+
+
+
+def run_validation_single_model(args):
     """
     Runs the move generation and validation process.
 
     Args:
         args: Parsed command-line arguments.
     """
+    storage_file = 'evaluation/outputs/generation_results.json'
+    import json
+    with open(storage_file, "r") as f:
+        test_results = json.load(f)
+
+    model2 = (args.checkpoint).split('/')[-1].split('.')[0]
+    model_split = model2.split('_')
+    model_iters = model_split[-1]
+    model_name = model2[:-(len(model_iters) + 1)]
+
+    dataset = (args.dataset).split('/')[-1].split('.')[0]
+
+    if (model_name in test_results) and (model_iters in test_results[model_name]) and (dataset in test_results[model_name][model_iters]):
+        print(f"The model {model_name} after {model_iters} iters has already been evaluated on {dataset} dataset")
+        return
+
     # Load meta information
     vocab_size, stoi, itos = load_meta(args.data_dir)
     print(f"Vocab Size: {vocab_size}")
 
     # Load the model
-    model = load_model(args.checkpoint, args.device)
-    print("Model loaded successfully.\n")
+    model = load_model(os.path.join(args.models_directory,model_name,args.checkpoint), args.device)
+    print(f"Model loaded successfully from {args.checkpoint}.\n")
 
     # Load precomputed legal moves
-    with open(args.precomputed_moves, 'rb') as f:
+    with open(args.dataset, 'rb') as f:
         precomputed_games = pickle.load(f)
 
-    print(f"Precomputed legal moves loaded from {args.precomputed_moves}")
+    print(f"Precomputed legal moves loaded from {args.dataset}")
 
     # Parse the input PGN into individual games
     total_generated_moves = 0
@@ -314,7 +499,7 @@ def run_validation(args):
 
     # Stats per game
     game_stats = []
-
+    game_dics = []
     # Wrap games in tqdm for progress bar
     for game_index, game_info in enumerate(tqdm(precomputed_games, desc="Evaluating games", unit="game")):
 
@@ -330,6 +515,7 @@ def run_validation(args):
 
         game_total_moves = 0
         game_illegal_moves = 0
+        illegal_move_indices = []
 
         for idx, move in enumerate(tqdm(moves, desc=f'Handling game {game_index}', unit = 'move') ):
             move_number = idx + 1
@@ -368,6 +554,7 @@ def run_validation(args):
                 if args.verbose:
                     print(f"Move {move_number}: Generated move '{generated_move}' is LEGAL.\n")
             else:
+                illegal_move_indices.append(move_number)
                 illegal_moves_count += 1
                 game_illegal_moves += 1
                 illegal_move_index += move_number
@@ -380,15 +567,17 @@ def run_validation(args):
                     print(f'The valid moves were: {precomputed_moves[idx]}')
 
             current_pgn = prompt_pgn + move + ' '
-
-        # Record stats for the current game
-        game_frequency = (game_illegal_moves / game_total_moves) * 100 if game_total_moves > 0 else 0
-        game_stats.append({
-            'game_index': game_index + 1,
-            'total_moves': game_total_moves,
-            'illegal_moves': game_illegal_moves,
-            'frequency': game_frequency
-        })
+        game_error_frequency = 1.0
+        if game_total_moves != 0:
+            game_error_frequency = game_illegal_moves/game_total_moves
+        game_dic = {
+               "error_indices" : illegal_move_indices,
+               "num_moves" : game_total_moves,
+               "num_errors" : game_illegal_moves,
+               "error_frequency" : game_error_frequency
+                }
+        game_dics.append(game_dic)
+        
 
     # Reporting
 #ALL GAME STATS
@@ -413,6 +602,7 @@ def run_validation(args):
 
 
     print("\n--- Validation Report ---")
+    print(f"Model: {args.checkpoint.split('/')[-1].split('.')[0]} Dataset: {args.dataset.split('/')[-1].split('.')[0]}")
     print(f"Total Generated Moves: {total_generated_moves}")
     print(f"Illegal Moves Generated: {illegal_moves_count}")
     if total_generated_moves > 0:
@@ -438,24 +628,63 @@ def run_validation(args):
     print(f"  Max frequency: {max_freq:.2f}%\n")
     print(f"  Min frequency: {min_freq:.2f}%\n")
 
-    ##write into csv storer
-    import csv
-    with open(args.results_file, mode='a', newline='', encoding='utf-8') as file:  # Use 'a' to append to the file
-        writer = csv.writer(file)
-        row = [(args.checkpoint.split('/')[-1]).split('.')[0], (args.precomputed_moves.split('/')[-1]).split('.')[0], total_generated_moves,illegal_moves_count, frequency, avg_index, avg_game_length]
-        writer.writerow(row)
-        if args.verbose:
-            print(f'row writen: {row}')
+    ##update file
+    add_result(test_results, args.checkpoint, args.dataset, game_dics)
 
+    with open(storage_file, "w") as f:
+        json.dump(test_results,f)
  
 
-    #if illegal_moves_examples:
-        #print("Examples of Illegal Moves:")
-        #for example in illegal_moves_examples[:5]:  # Show up to 5 examples
-            #move_num, move, reason = example
-            #print(f"Move {move_num}: {player} -> '{move}' | Reason: {reason}")
-    #else:
-        #print("All generated moves were legal!")
+def add_result(test_results, model_name, dataset_name, game_dics):
+    model2 = model_name.split('/')[-1].split('.')[0]
+    model_split = model2.split('_')
+    model_iters = model_split[-1]
+    model_name = model2[:-(len(model_iters) + 1)]
+    dataset = dataset_name.split('/')[-1].split('.')[0]
+
+    if model_name not in test_results:
+        test_results[model_name] = {}
+    if model_iters not in test_results[model_name]:
+        test_results[model_name][model_iters] = {}
+    test_results[model_name][model_iters][dataset] = game_dics
+
+def get_checkpoints(folder: str, prefixes: list) -> list:
+    """
+    Retrieves all checkpoint files in the folder with the specified prefixes of form `prefix_{some int}K.pth`.
+
+    Args:
+        folder (str): The directory to search for checkpoint files.
+        prefixes (list): A list of prefixes to match (e.g., ["lichess_karvhyp", "another_prefix"]).
+
+    Returns:
+        list: A sorted list of matching checkpoint file names.
+    """
+    # Create regex patterns for all prefixes
+
+    patterns = [re.compile(rf"^{re.escape(prefix)}_\d+K\.pth$") for prefix in prefixes]
+
+    try:
+        # List all files in the folder
+        files = os.listdir(folder)
+
+        # Filter files that match any pattern
+
+        models_checkpoints = [dir for dir in files if dir in prefixes]
+        all_checkpoint = []
+        for model_checkpoints in models_checkpoints:
+            files = os.listdir(os.path.join(folder,model_checkpoints))
+            checkpoints = [file for file in files if any(pattern.match(file) for pattern in patterns)]
+            all_checkpoint += checkpoints
+        # Sort the list by the integer value before 'K'
+        checkpoints.sort(key=lambda x: int(re.search(r"_(\d+)K", x).group(1)))
+
+        return all_checkpoint
+    #except FileNotFoundError:
+    #    print(f"Error: The folder '{folder}' does not exist.")
+    #    return []
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
 
 def precompute_legal_moves_wrapper(args):
     """
@@ -464,7 +693,7 @@ def precompute_legal_moves_wrapper(args):
     Args:
         args: Parsed command-line arguments.
     """
-    precompute_legal_moves(args.pgn_files, args.output_file, verbose=args.verbose, troubleshoot_verbose=args.troubleshoot_verbose)
+    precompute_legal_moves(args.pgn_files, args.output_file, verbose=args.verbose, troubleshoot_verbose=args.troubleshoot_verbose,max_moves=args.max_moves)
 
 def main():
     import argparse
@@ -478,11 +707,14 @@ def main():
     precompute_parser.add_argument('--output_file', type=str, required=True, help='Output file to save precomputed moves')
     precompute_parser.add_argument('--verbose', action='store_true', help='Enable verbose output for debugging')
     precompute_parser.add_argument('--troubleshoot_verbose', action='store_true', help='Enable verbose output for debugging')
+    precompute_parser.add_argument('--max_moves', type=int, help='Enable detailed illegal move information')
 
     # Subparser for evaluation mode
     eval_parser = subparsers.add_parser('eval', help='Evaluate model using precomputed legal moves')
-    eval_parser.add_argument('--checkpoint', type=str, required=True, help='Path to the model checkpoint (e.g., checkpoint.pth)')
-    eval_parser.add_argument('--precomputed_moves', type=str, required=True, help='File containing precomputed legal moves')
+    eval_parser.add_argument('--checkpoints', type=str, required=True, nargs= '*', help='Path to the model checkpoint (e.g., checkpoint.pth)')
+    eval_parser.add_argument('--models_directory', type=str, required=True, help='Path to the model checkpoint (e.g., checkpoint.pth)')
+    eval_parser.add_argument('--models', type=str, required=True, nargs= '*', help='Path to the model checkpoint (e.g., checkpoint.pth)')
+    eval_parser.add_argument('--datasets', type=str, required=True, nargs = '+',help='File containing precomputed legal moves')
     eval_parser.add_argument('--data_dir', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
     eval_parser.add_argument('--results_file', type=str, default='data/openwebtext', help='Directory where meta.pkl is located')
     eval_parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help='Device to run the model on')
@@ -496,10 +728,21 @@ def main():
 
     args = parser.parse_args()
 
+
     if args.mode == 'precompute':
         precompute_legal_moves_wrapper(args)
     elif args.mode == 'eval':
-        run_validation(args)
+        all 
+        if args.models:
+            all_model_checkpoints = get_checkpoints(args.models_directory,args.models)
+        else:
+            all_model_checkpoints = []
+        all_model_checkpoints = all_model_checkpoints + args.checkpoints
+        for checkpoint in all_model_checkpoints:
+            for dataset in args.datasets:
+                args.checkpoint = checkpoint
+                args.dataset = dataset
+                run_validation_single_model(args)
     else:
         parser.print_help()
 

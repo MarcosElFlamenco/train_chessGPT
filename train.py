@@ -79,7 +79,7 @@ bucket_name = 'chess-gpt-checkpoints-600'
 
 verbose = False
 local_bypass = False
-debugging = False
+debugging = True
 
 is_random = False
 

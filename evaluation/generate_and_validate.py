@@ -7,7 +7,7 @@ import re
 import chess
 import sys
 from tqdm import tqdm
-from model import GPT, GPTConfig  # Ensure model.py is in the same directory or adjust the import path accordingly
+from utils.model import GPT, GPTConfig  # Ensure model.py is in the same directory or adjust the import path accordingly
  
 
 def remove_prefix_from_state_dict(state_dict, prefix='_orig_mod.'):
