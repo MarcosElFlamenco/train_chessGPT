@@ -1,0 +1,31 @@
+name: random_train
+
+resources:
+  cloud: aws
+  region: eu-west-2
+
+  any_of:
+    - accelerators: H100:1
+    - accelerators: A10G:1
+  use_spot: true
+
+workdir: .
+
+file_mounts:
+  /checkpoint:
+    source: s3://chess-data-bucket-craft
+    store: s3
+    mode: MOUNT
+  /sourcecsv:
+    source: s3://chess-gpt-checkpoints-600
+    store: s3
+    mode: MOUNT
+
+setup: |
+  echo export WANDB_API_KEY=[YOUR-WANDB-API-KEY] >> ~/.bashrc
+  set -e .
+  pip install -r skypilot/train_requirements.txt
+
+run: |
+  set -e
+  python3 train.py $ENV_MODEL_CONFIG

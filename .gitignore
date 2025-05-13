@@ -4,7 +4,6 @@
 .vscode
 
 *.bin
-*.pkl
 *.pt
 *.pyc
 *.csv
@@ -19,7 +18,7 @@ elo_quick_save.json
 
 models
 input.txt
-chessEnv/
+*Env
 wandb
 env/
 mlflow_storage/

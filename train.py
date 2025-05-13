@@ -45,8 +45,6 @@ always_save_checkpoint = True # if True, always save a checkpoint after each eva
 init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
 # wandb logging
 wandb_log = False # disabled by default
-mlflow_log = False # disabled by default
-mlflow_location = 'mlflow_storage'
 wandb_project = 'owt'
 wandb_run_name = 'gpt2' # 'run' + str(time.time())
 # data
@@ -77,11 +75,11 @@ backend = 'nccl' # 'nccl', 'gloo', etc.
 
 data_type = '1M'
 checkpoint_key_prefix = 'lichess_8layer'
-bucket_name = 'chess-checkpoint-craft'
+bucket_name = 'chess-gpt-checkpoints-600'
 
 verbose = False
 local_bypass = False
-debugging = True
+debugging = False
 
 is_random = False
 
@@ -114,7 +112,7 @@ print(f" the s3 bucket is {data_bucket_name}")
 if os.path.isfile(train_path):
     print("Train file already exists, skipping download")
 else:
-    print(f"Downloading {train_name} to the following adress {train_path}...")
+    print(f"Downloading {train_name} to the following address {train_path}...")
     download_bins_from_s3_with_progress(bucket_name=data_bucket_name, object_name=train_name,file_name=train_path )
 if os.path.isfile(val_path):
     print("Val file already exists, skipping download")
@@ -149,8 +147,6 @@ else:
     seed_offset = 0
     ddp_world_size = 1
 tokens_per_iter = gradient_accumulation_steps * ddp_world_size * batch_size * block_size
-print(f"tokens per iteration will be: {tokens_per_iter:,}")
-print(f"the math is {gradient_accumulation_steps}, {ddp_world_size}, {batch_size}, {block_size}")
 
 if master_process:
     os.makedirs(out_dir, exist_ok=True)
@@ -184,13 +180,6 @@ def get_batch(split,is_random,global_iter_num):
         ix = torch.arange(start = start, end=end, step = 1) * (block_size + 1)
     x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
-    if debugging: 
-        if x[0][0].item() == 15 and x[1][0].item() == 15 and x[2][0] == 15:
-            pass
-        else:
-            print("problem detected with input lines")
-            print(f'These are the first few lines of the batch inputs: \n {x[0][0:10]}... \n {x[1][0:10]}... \n {x[2][0:10]}...')
-            print(f'These are the first few lines of the batch targets: \n {y[0][0:10]}... \n {y[1][0:10]}... \n {y[2][0:10]}...')
     if device_type == 'cuda':
         # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
         x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
@@ -207,7 +196,6 @@ val_loss_list = []
 # attempt to derive vocab_size from the dataset
 meta_path = os.path.join(data_dir, 'meta.pkl')
 meta_vocab_size = None
-print(meta_path)
 if os.path.exists(meta_path):
     with open(meta_path, 'rb') as f:
         meta = pickle.load(f)
@@ -256,7 +244,7 @@ if init_from == 'resume':
         model.load_state_dict(state_dict)
         best_val_loss = checkpoint['best_val_loss']
         if flag:
-            print('we did in fact remove unwanted prefix')
+            print('The unwanted prefix was found and removed')
 if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")
@@ -336,16 +324,9 @@ if wandb_log and master_process:
     import wandb
     #wandb.init(project=wandb_project, name=wandb_run_name, config=config)
     wandb.init(project=wandb_project, config=config)
-if mlflow_log and master_process:
-    import mlflow
-    import mlflow.sklearn
-    mlflow.set_tracking_uri(mlflow_location)
-#    mlflow.log_params(config)
-    mlflow.set_experiment("chess_training")
 
 
 
-#with mlflow.start_run(log_system_metrics=True):
 ## training loop
 X, Y = get_batch('train',is_random=True,global_iter_num=iter_num) # fetch the very first batch
 t0 = time.time()
@@ -371,14 +352,6 @@ while True:
                 "train/loss_eval": losses['train'],
                 "val/loss_eval": losses['val'],
             })
-
-
-        if mlflow_log:
-            mlflow.log_metric('iter', iter_num ) 
-            mlflow.log_metric('train_loss', losses['train'])
-            mlflow.log_metric('val_loss', losses['val'])
-            mlflow.log_metric('lr', lr)
-            mlflow.log_metric('mfu', running_mfu*100)
 
         if (losses['val'] < best_val_loss or always_save_checkpoint):
             best_val_loss = losses['val']
@@ -462,15 +435,6 @@ while True:
                 "max_gradient_norm": grad_max,
                 "min_gradient_norm": grad_min
             })
-
-
-        if mlflow_log:
-            mlflow.log_metric('iter', iter_num ) 
-            mlflow.log_metric('train_loss', lossf)
-            mlflow.log_metric('lr', lr)
-            mlflow.log_metric('mfu', running_mfu*100)
-
-
 
     iter_num += 1
     local_iter_num += 1

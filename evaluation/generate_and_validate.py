@@ -253,9 +253,10 @@ def run_validation(args):
             illegal_moves_examples.append((move_number, player, generated_move, "Illegal move generated"))
 #            illegal_moves_board.append(chess.Board())
 #            illegal_move_pgns.append(current_pgn)
-            print(f'Move num {move_number}, playing as {player}, played {generated_move}')
-            print(board)
-            print(current_pgn)
+            if args.troubleshooting_verbose:
+                print(f'Move num {move_number}, playing as {player}, played {generated_move}')
+                print(board)
+                print(current_pgn)
 
         # Attempt to apply scripted move to the board
         try:
@@ -321,6 +322,7 @@ def main():
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help='Device to run the model on')
     parser.add_argument('--temperature', type=float, default=1.0, help='Sampling temperature for move generation (default: 1.0)')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output for debugging')
+    parser.add_argument('--troubleshooting_verbose', action='store_true', help='Enable troubleshooting verbose output for debugging')
     parser.add_argument('--deterministic', action='store_true', help='Enable verbose output for debugging')
     parser.add_argument('--graph', action='store_true', help='Enable verbose output for debugging')
     parser.add_argument('--illegal_info', action='store_true', help='Enable verbose output for debugging')

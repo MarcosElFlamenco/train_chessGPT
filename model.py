@@ -203,22 +203,12 @@ class GPT(nn.Module):
                 # find the maximum loss in the batch and its index
                 max_loss, max_index = loss_per_batch.max(dim=0)
 
-                # log the largest loss and its index
-
-                torch.set_printoptions(edgeitems=15,linewidth=1000)
-                print(f"largest loss: {max_loss.item()}, batch index: {max_index.item()}")
-                print(f"Predic: {logits[max_index].argmax(-1)}")
-                print(f"target: {targets[max_index]}")
-
                 # Compute softmax probabilities for the problematic sample
                 probs = F.softmax(logits[max_index], dim=-1)  # Softmax over the vocab dimension
 
                 # Gather the probabilities for the predicted tokens
                 argmax_indices = logits[max_index].argmax(dim=-1)
                 predicted_probs = probs[torch.arange(probs.size(0)), argmax_indices]
-
-                torch.set_printoptions(precision=2)  # Set precision to 4 decimal places
-                print(f"Probab: {predicted_probs}")
 
                 # aggregate loss for backpropagation
                 loss = loss_per_batch.mean()

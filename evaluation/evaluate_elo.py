@@ -1,3 +1,11 @@
+##This script aims to run multiple games of chess between the stockfish engine and the model,
+##It should callibrate sf to the specified elo and then update model elo as a function
+##of it's results in the game
+##CAVEATS:
+##1) not super sure stockfish is actually playing 1300 elo when asked to
+##2) Model doesn't always play enough valid moves to be evaluated on it's elo
+##3) We were not able to reproduce Karvonen's results with his own model
+
 import argparse
 import os
 import pickle
@@ -621,7 +629,7 @@ def evaluate_models(model_names, args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate LLM against Stockfish to compute Elo.")
-    parser.add_argument('--checkpoints', type=str,nargs="+", help='Path to model checkpoint.')
+    parser.add_argument('--checkpoints', type=str,nargs="+", help='Path to model checkpoint, there can be multiple')
     parser.add_argument('--data_dir', type=str, default='data', help='Directory with meta.pkl.')
     parser.add_argument('--device', type=str, default='cuda', help='Device to run the model on.')
     parser.add_argument('--num_games', type=int, default=100, help='Number of games to play.')
@@ -634,9 +642,9 @@ if __name__ == "__main__":
     parser.add_argument('--models_dir', type=str, help='Directory with model checkpoints.')
     parser.add_argument('--save_dir', type=str, help='Directory to save results.')
     parser.add_argument('--stockfish_path', type=str, required=True, help='Path to Stockfish executable.')
-    parser.add_argument('--evaluation_key', type=str, required=True, help='Path to Stockfish executable.')
-    parser.add_argument('--verbose', action = "store_true", help='Path to Stockfish executable.')
-    parser.add_argument('--troubleshooting_verbose', action = "store_true", help='Path to Stockfish executable.')
+    parser.add_argument('--evaluation_key', type=str, required=True, help='Key to uniquely indentify the results of this run, in case you run multiple')
+    parser.add_argument('--verbose', action = "store_true", help='will make the run print more info')
+    parser.add_argument('--troubleshooting_verbose', action = "store_true", help='Will print even more, mainly for troubleshooting')
 
     parser.add_argument('--beam_width', type=int, default=3, help='Number of beams to use in beam search.')
     parser.add_argument('--beam_search', action= "store_true", help='Number of beams to use in beam search.')
