@@ -14,7 +14,7 @@ import chess.engine
 import torch
 import torch.nn.functional as F
 import numpy as np
-from model import GPT, GPTConfig  # Ensure model.py is available
+from utils.model import GPT, GPTConfig  # Ensure model.py is available
 import json
 import math
 import sys

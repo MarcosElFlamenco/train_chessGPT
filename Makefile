@@ -16,10 +16,13 @@ GM_YAML := grandmaster.yaml
 #LOCAL TRAINING (FOR DEBUGGING)
 
 LOCAL_CONFIG := local.py
+#for launching training
 train: 
 	$(PYTHON) $(TRAIN) \
 		config/$(LOCAL_CONFIG)
 
+# this script will convert a ziped csv file of chess games
+# into a binary that is optimized for the model to train on
 prepare:
 	$(PYTHON) $(PREPARE)
 
@@ -52,14 +55,18 @@ print_legal_moves:
 	$(PYTHON) evaluation/utils/legal_moves.py
 
 
-PGN_TO_EVALUATE := your_pgn_file
+PGN_TO_EVALUATE := twic1592.pgn
+STOCKFISH_LOCATION := ~/Downloads/stockfish-ubuntu-x86-64-avx2/stockfish/stockfish-ubuntu-x86-64-avx2
+
 #To get a feel for stockfish valuation on real games
+# outputs to the output file a list of stockfish evaluations of the configurations for a given game
+# Not necessarly super valuable, plus it takes forever to run
 stockfish_looks_at_gm:
-	$(PYTHON) evaluation/stockfish_looks_at_gm.py \
+	$(PYTHON) evaluation/competitive_evaluation/stockfish_looks_at_gm.py \
 		--pgn_file evaluation/eval_datasets/$(PGN_TO_EVALUATE)\
 		--output_file evaluation/outputs/stockfish_opinion.json \
 		--max_games 2300 \
-		--stockfish_path ~/stockfish-ubuntu-x86-64-avx2/stockfish/stockfish1 \
+		--stockfish_path $(STOCKFISH_LOCATION)
 		--time_per_move 1e-2 \
 
 
@@ -106,6 +113,7 @@ generate_moves:
 		--input $(INPUT_PGN) \
 		--data_dir $(DATA_DIR) \
 		--deterministic \
+		--verbose
 
 ##BENCHMARKING
 BENCHMARK_GAMES := twic1592
@@ -147,7 +155,6 @@ MODELS_DIRECTORY := ../models
 ## Here you can give the pkl file of your choice and benchmark a model
 ## By default, will evaluate all models starting with the prefix given as "models" argument
 ## in the "models_directory" argument
-
 benchmark_models:
 	$(PYTHON) evaluation/benchmark.py \
 		eval \
